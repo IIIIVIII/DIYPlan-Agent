@@ -1273,6 +1273,19 @@ code {
   stroke-width: 1;
 }
 
+.manual-surface {
+  fill: #dedbd2;
+  stroke: #2b2d27;
+  stroke-width: 2;
+}
+
+.manual-surface-stitch {
+  fill: none;
+  stroke: rgba(43, 45, 39, 0.52);
+  stroke-linecap: round;
+  stroke-width: 1.4;
+}
+
 .manual-part {
   transform-box: fill-box;
   transform-origin: center;
@@ -1286,8 +1299,38 @@ code {
   stroke-width: 3;
 }
 
+.manual-tabletop-surface {
+  fill: #c48b58;
+}
+
+.manual-tabletop-rim {
+  fill: #9a653d;
+}
+
+.manual-seam,
+.manual-hole {
+  fill: none;
+  stroke: #332313;
+  stroke-width: 2.4;
+}
+
+.manual-hole {
+  fill: #fffaf0;
+}
+
 .manual-part-rail rect {
   fill: #a96f3f;
+}
+
+.manual-part-metal_connector rect {
+  fill: #d8d5ce;
+}
+
+.manual-part-leveler_set line,
+.manual-part-leveler_set circle {
+  fill: #d8d5ce;
+  stroke: #332313;
+  stroke-width: 3;
 }
 
 .manual-part.ghost {
@@ -1295,6 +1338,10 @@ code {
 }
 
 .manual-part.highlight rect,
+.manual-part.highlight polygon,
+.manual-part.highlight > path:not(.manual-grain),
+.manual-part.highlight .manual-tabletop-surface,
+.manual-part.highlight .manual-tabletop-rim,
 .manual-part-fastener_set.highlight,
 .manual-part-adhesive_lines.highlight {
   stroke: #d5ff57;
@@ -1349,6 +1396,47 @@ code {
   stroke: currentColor;
   stroke-linecap: round;
   stroke-width: 6;
+}
+
+.manual-inset circle {
+  fill: #fffaf0;
+  stroke: #151713;
+  stroke-width: 2;
+}
+
+.manual-inset rect,
+.manual-inset-detail circle {
+  fill: #e7e0d3;
+  stroke: #151713;
+  stroke-width: 2;
+}
+
+.manual-inset-detail path,
+.manual-inset-detail line,
+.manual-thread,
+.manual-inset-leader {
+  fill: none;
+  stroke: #151713;
+  stroke-linecap: round;
+  stroke-width: 2.4;
+}
+
+.manual-thread {
+  stroke-dasharray: 3 3;
+}
+
+.manual-inset-label {
+  fill: #151713;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.manual-helper-scene {
+  fill: none;
+  stroke: rgba(21, 23, 19, 0.55);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .manual-callouts rect {

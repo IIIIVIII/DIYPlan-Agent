@@ -686,13 +686,27 @@ function renderGenericMaterialChip(material) {
 }
 
 function renderMiniPartShape(part) {
-  if (part.kind?.startsWith("round_half")) {
-    const left = part.kind === "round_half_left";
+  if (part.kind?.startsWith("round_top_half") || part.kind?.startsWith("round_half")) {
+    const left = part.kind.endsWith("_left");
     return `
-      <path class="mini-board" d="${left ? "M102 18 L102 58 L30 58 Q10 38 30 18 Z" : "M18 18 L18 58 L90 58 Q110 38 90 18 Z"}" />
-      <path class="mini-grain" d="M30 34 C 48 24, 70 48, 96 34" />
-      <path class="mini-grain" d="M28 46 C 52 38, 72 58, 96 46" />
+      <path class="mini-board" d="${left ? "M100 12 L100 64 C72 64 18 58 18 38 C18 18 72 12 100 12 Z" : "M20 12 L20 64 C48 64 102 58 102 38 C102 18 48 12 20 12 Z"}" />
+      <path class="mini-grain" d="M32 30 C 50 18, 70 42, 94 30" />
+      <path class="mini-grain" d="M30 48 C 52 38, 72 58, 94 48" />
     `;
+  }
+
+  if (part.kind === "metal_connector") {
+    return `
+      <rect class="mini-board" x="28" y="28" width="64" height="20" rx="5" />
+      <circle class="mini-fastener" cx="42" cy="38" r="4" />
+      <circle class="mini-fastener" cx="78" cy="38" r="4" />
+    `;
+  }
+
+  if (part.kind === "leveler_set") {
+    return [0, 1, 2, 3]
+      .map((index) => `<g><line class="mini-adhesive" x1="${30 + index * 20}" y1="22" x2="${30 + index * 20}" y2="48" /><circle class="mini-fastener" cx="${30 + index * 20}" cy="55" r="7" /></g>`)
+      .join("");
   }
 
   if (part.kind === "angled_leg") {
@@ -760,8 +774,10 @@ function renderInstructionSvg(instructionModel, frame, options = {}) {
       <g class="manual-grid-lines">
         ${drawManualGrid(safeNumber(viewBox.width, 520), safeNumber(viewBox.height, 360))}
       </g>
+      ${drawInstructionScene(frame, viewBox)}
       <g class="manual-parts">${partSvg}</g>
       ${drawInstructionArrows(frame.arrows || [])}
+      ${options.compact ? "" : drawInstructionInsets(frame.insets || [])}
       ${options.compact ? "" : drawInstructionCallouts(frame.callouts || [])}
     </svg>
   `;
@@ -796,24 +812,36 @@ function drawInstructionPart(part, placement, state) {
     `;
   }
 
-  if (part.kind?.startsWith("round_half")) {
+  if (part.kind?.startsWith("round_top_half") || part.kind?.startsWith("round_half")) {
+    return drawRoundTopHalf(part, placement, classes, state);
+  }
+
+  if (part.kind === "metal_connector") {
     const x = safeNumber(placement.x);
     const y = safeNumber(placement.y);
-    const width = safeNumber(placement.width, 140);
-    const height = safeNumber(placement.height, 60);
-    const left = part.kind === "round_half_left";
-    const d = left
-      ? `M${x + width} ${y} L${x + width} ${y + height} L${x + width * 0.08} ${y + height} Q${x - width * 0.16} ${y + height / 2} ${x + width * 0.08} ${y} Z`
-      : `M${x} ${y} L${x} ${y + height} L${x + width * 0.92} ${y + height} Q${x + width * 1.16} ${y + height / 2} ${x + width * 0.92} ${y} Z`;
-    const label = !state.compact ? `<text class="manual-part-label" x="${x + width / 2}" y="${y + height / 2 + 4}">${escapeHtml(part.label)}</text>` : "";
+    const width = safeNumber(placement.width, 64);
+    const height = safeNumber(placement.height, 20);
+    const holes = [
+      [x + width * 0.24, y + height / 2],
+      [x + width * 0.76, y + height / 2]
+    ];
     return `
       <g class="${classes}">
-        <path d="${d}"></path>
-        <path class="manual-grain" d="M${x + 18} ${y + height * 0.38} C ${x + width * 0.36} ${y + 8}, ${x + width * 0.64} ${y + height - 4}, ${x + width - 18} ${y + height * 0.36}"></path>
-        <path class="manual-grain" d="M${x + 20} ${y + height * 0.68} C ${x + width * 0.38} ${y + height * 0.44}, ${x + width * 0.65} ${y + height + 4}, ${x + width - 20} ${y + height * 0.62}"></path>
-        ${label}
+        <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6"></rect>
+        ${holes.map(([hx, hy]) => `<circle class="manual-hole" cx="${hx}" cy="${hy}" r="4"></circle>`).join("")}
       </g>
     `;
+  }
+
+  if (part.kind === "leveler_set") {
+    return (placement.points || [])
+      .map(([x, y]) => `
+        <g class="${classes}">
+          <line x1="${safeNumber(x)}" y1="${safeNumber(y) - 18}" x2="${safeNumber(x)}" y2="${safeNumber(y) + 2}"></line>
+          <circle cx="${safeNumber(x)}" cy="${safeNumber(y) + 8}" r="${state.compact ? 5 : 8}"></circle>
+        </g>
+      `)
+      .join("");
   }
 
   if (part.kind === "angled_leg") {
@@ -864,6 +892,104 @@ function drawInstructionPart(part, placement, state) {
       <path class="manual-grain" d="M${x + 12} ${y + height * 0.35} C ${x + width * 0.28} ${y + 4}, ${x + width * 0.62} ${y + height - 5}, ${x + width - 14} ${y + height * 0.34}"></path>
       <path class="manual-grain" d="M${x + 16} ${y + height * 0.72} C ${x + width * 0.34} ${y + height * 0.48}, ${x + width * 0.64} ${y + height + 2}, ${x + width - 18} ${y + height * 0.64}"></path>
       ${label}
+    </g>
+  `;
+}
+
+function drawRoundTopHalf(part, placement, classes, state) {
+  const x = safeNumber(placement.x);
+  const y = safeNumber(placement.y);
+  const width = safeNumber(placement.width, 150);
+  const height = safeNumber(placement.height, 126);
+  const depth = safeNumber(placement.depth, 12);
+  const left = part.kind.endsWith("_left");
+  const seamX = left ? x + width : x;
+  const outerX = left ? x : x + width;
+  const topD = left
+    ? `M${seamX} ${y} L${seamX} ${y + height} C${x + width * 0.48} ${y + height}, ${outerX} ${y + height * 0.82}, ${outerX} ${y + height / 2} C${outerX} ${y + height * 0.18}, ${x + width * 0.48} ${y}, ${seamX} ${y} Z`
+    : `M${seamX} ${y} L${seamX} ${y + height} C${x + width * 0.52} ${y + height}, ${outerX} ${y + height * 0.82}, ${outerX} ${y + height / 2} C${outerX} ${y + height * 0.18}, ${x + width * 0.52} ${y}, ${seamX} ${y} Z`;
+  const rimD = left
+    ? `M${seamX} ${y + height} L${seamX} ${y + height + depth} C${x + width * 0.48} ${y + height + depth}, ${outerX} ${y + height * 0.82 + depth}, ${outerX} ${y + height / 2 + depth} L${outerX} ${y + height / 2} C${outerX} ${y + height * 0.82}, ${x + width * 0.48} ${y + height}, ${seamX} ${y + height} Z`
+    : `M${seamX} ${y + height} L${seamX} ${y + height + depth} C${x + width * 0.52} ${y + height + depth}, ${outerX} ${y + height * 0.82 + depth}, ${outerX} ${y + height / 2 + depth} L${outerX} ${y + height / 2} C${outerX} ${y + height * 0.82}, ${x + width * 0.52} ${y + height}, ${seamX} ${y + height} Z`;
+  const seam = `<line class="manual-seam" x1="${seamX}" y1="${y + 5}" x2="${seamX}" y2="${y + height + depth - 4}"></line>`;
+  const label = !state.compact ? `<text class="manual-part-label" x="${left ? x + width * 0.62 : x + width * 0.38}" y="${y + height / 2 + 5}">${escapeHtml(part.label)}</text>` : "";
+
+  return `
+    <g class="${classes}">
+      <path class="manual-tabletop-rim" d="${rimD}"></path>
+      <path class="manual-tabletop-surface" d="${topD}"></path>
+      ${seam}
+      <path class="manual-grain" d="M${left ? x + width * 0.2 : x + width * 0.05} ${y + height * 0.38} C ${x + width * 0.36} ${y + 8}, ${x + width * 0.68} ${y + height - 8}, ${left ? x + width * 0.9 : x + width * 0.8} ${y + height * 0.34}"></path>
+      <path class="manual-grain" d="M${left ? x + width * 0.18 : x + width * 0.08} ${y + height * 0.68} C ${x + width * 0.42} ${y + height * 0.5}, ${x + width * 0.66} ${y + height + 6}, ${left ? x + width * 0.92 : x + width * 0.82} ${y + height * 0.64}"></path>
+      ${label}
+    </g>
+  `;
+}
+
+function drawInstructionScene(frame, viewBox) {
+  const width = safeNumber(viewBox.width, 520);
+  const height = safeNumber(viewBox.height, 360);
+  const elements = [];
+
+  if (frame.surface === "padded_floor") {
+    elements.push(`
+      <path class="manual-surface" d="M52 88 C150 60, 250 56, 340 72 C442 90, 506 142, 504 244 C410 304, 206 318, 70 268 C48 210, 36 148, 52 88 Z"></path>
+      ${Array.from({ length: 18 }, (_, index) => {
+        const x = 58 + index * 25;
+        return `<path class="manual-surface-stitch" d="M${x} 76 c10 10 10 20 0 30"></path>`;
+      }).join("")}
+      ${Array.from({ length: 16 }, (_, index) => {
+        const x = 80 + index * 25;
+        return `<path class="manual-surface-stitch" d="M${x} 282 c10 10 10 20 0 30"></path>`;
+      }).join("")}
+    `);
+  }
+
+  if (frame.helper === "two_person_flip") {
+    elements.push(`
+      <g class="manual-helper-scene" transform="translate(${width - 178} ${height - 106})">
+        <circle cx="32" cy="30" r="12"></circle>
+        <path d="M32 44 L32 82 M12 58 L52 58 M20 102 L32 82 L44 102"></path>
+        <circle cx="126" cy="30" r="12"></circle>
+        <path d="M126 44 L126 82 M106 58 L146 58 M114 102 L126 82 L138 102"></path>
+      </g>
+    `);
+  }
+
+  if (!elements.length) return "";
+  return `<g class="manual-scene">${elements.join("")}</g>`;
+}
+
+function drawInstructionInsets(insets) {
+  if (!insets.length) return "";
+  return `
+    <g class="manual-insets">
+      ${insets
+        .map((inset) => {
+          const x = safeNumber(inset.x, 420);
+          const y = safeNumber(inset.y, 86);
+          const r = safeNumber(inset.r, 42);
+          const label = escapeHtml(inset.label || "");
+          const type = inset.type || "screw";
+          const detail =
+            type === "connector"
+              ? `<rect x="${x - 26}" y="${y - 8}" width="52" height="16" rx="5"></rect><circle cx="${x - 14}" cy="${y}" r="4"></circle><circle cx="${x + 14}" cy="${y}" r="4"></circle><path d="M${x - 40} ${y + 20} L${x - 12} ${y + 8} M${x + 40} ${y + 20} L${x + 12} ${y + 8}"></path>`
+              : type === "leveler"
+                ? `<line x1="${x}" y1="${y - 26}" x2="${x}" y2="${y + 8}"></line><circle cx="${x}" cy="${y + 18}" r="11"></circle><path d="M${x - 22} ${y - 4} q22 -18 44 0"></path>`
+                : `<path class="manual-thread" d="M${x} ${y - 30} L${x} ${y + 26}"></path><circle cx="${x}" cy="${y - 34}" r="11"></circle><path d="M${x - 22} ${y - 14} L${x + 22} ${y - 14} M${x - 22} ${y + 8} L${x + 22} ${y + 8}"></path>`;
+          const leader = inset.to
+            ? `<path class="manual-inset-leader" d="M${x - r * 0.65} ${y + r * 0.65} C${x - r * 1.5} ${y + r * 1.2}, ${safeNumber(inset.to[0]) + 30} ${safeNumber(inset.to[1]) - 20}, ${safeNumber(inset.to[0])} ${safeNumber(inset.to[1])}"></path>`
+            : "";
+          return `
+            <g class="manual-inset">
+              ${leader}
+              <circle cx="${x}" cy="${y}" r="${r}"></circle>
+              ${label ? `<text class="manual-inset-label" x="${x - r - 12}" y="${y - r + 12}">${label}</text>` : ""}
+              <g class="manual-inset-detail">${detail}</g>
+            </g>
+          `;
+        })
+        .join("")}
     </g>
   `;
 }

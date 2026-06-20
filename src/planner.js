@@ -498,6 +498,203 @@ function roundTableInstructionModel(plan) {
   const legMaterial = findMaterialName(plan, "2x4") || findMaterialName(plan, "leg") || "2x4 hardwood boards";
   const railMaterial = findMaterialName(plan, "1x4") || findMaterialName(plan, "rail") || "1x4 hardwood boards";
   const screwMaterial = findMaterialName(plan, "screw") || "wood screws 1-1/4 inch";
+  const connectorMaterial = "tabletop alignment connectors";
+  const boltMaterial = "machine bolts and washers";
+  const levelerMaterial = "adjustable leveling feet";
+  const finishMaterial = findMaterialName(plan, "polyurethane") || findMaterialName(plan, "finish") || "water based polyurethane satin";
+
+  const parts = [
+    part("top_left_half", "Left tabletop half", "round_top_half_left", topMaterial, "57 in dia half", 1, { x: 98, y: 78, width: 162, height: 156, depth: 14 }),
+    part("top_right_half", "Right tabletop half", "round_top_half_right", topMaterial, "57 in dia half", 1, { x: 260, y: 78, width: 162, height: 156, depth: 14 }),
+    part("seam_connector_top", "Upper seam connector", "metal_connector", connectorMaterial, "2 in plate", 1, { x: 236, y: 116, width: 48, height: 18 }),
+    part("seam_connector_bottom", "Lower seam connector", "metal_connector", connectorMaterial, "2 in plate", 1, { x: 236, y: 196, width: 48, height: 18 }),
+    part("apron_front", "Front apron rail", "rail", railMaterial, "38 x 3 in", 1, { x: 150, y: 144, width: 220, height: 16 }),
+    part("apron_back", "Back apron rail", "rail", railMaterial, "38 x 3 in", 1, { x: 150, y: 218, width: 220, height: 16 }),
+    part("apron_left", "Left apron rail", "rail", railMaterial, "24 x 3 in", 1, { x: 150, y: 158, width: 16, height: 76 }),
+    part("apron_right", "Right apron rail", "rail", railMaterial, "24 x 3 in", 1, { x: 354, y: 158, width: 16, height: 76 }),
+    part("leg_left_front", "Left front leg", "angled_leg", legMaterial, "28 in angled", 1, { x: 130, y: 152, width: 34, height: 128, tilt: -8 }),
+    part("leg_left_back", "Left back leg", "angled_leg", legMaterial, "28 in angled", 1, { x: 174, y: 152, width: 30, height: 128, tilt: 6 }),
+    part("leg_right_back", "Right back leg", "angled_leg", legMaterial, "28 in angled", 1, { x: 316, y: 152, width: 30, height: 128, tilt: -6 }),
+    part("leg_right_front", "Right front leg", "angled_leg", legMaterial, "28 in angled", 1, { x: 358, y: 152, width: 34, height: 128, tilt: 8 }),
+    part("foot_left", "Left foot rail", "foot_rail", railMaterial, "30 x 3 in", 1, { x: 116, y: 282, width: 120, height: 16 }),
+    part("foot_right", "Right foot rail", "foot_rail", railMaterial, "30 x 3 in", 1, { x: 284, y: 282, width: 120, height: 16 }),
+    part("cross_beam_a", "Lower cross beam A", "cross_beam", railMaterial, "42 x 3 in", 1, { x: 178, y: 254, width: 164, height: 14, angle: -17 }),
+    part("cross_beam_b", "Lower cross beam B", "cross_beam", railMaterial, "42 x 3 in", 1, { x: 178, y: 254, width: 164, height: 14, angle: 17 }),
+    part("screw_set", "Screw points", "fastener_set", screwMaterial, "pre-drill first", 28, {}),
+    part("bolt_set", "Bolt and washer set", "fastener_set", boltMaterial, "tighten by hand first", 8, {}),
+    part("leveler_set", "Leveling feet", "leveler_set", levelerMaterial, "4 foot glides", 4, {}),
+    part("sand_pass", "Sanded round edge", "finish_overlay", "sander or sandpaper", "120-220 grit", 1, {}),
+    part("finish_coat", "Clear finish", "finish_overlay", finishMaterial, "2-3 coats", 1, {})
+  ];
+
+  const topOpen = {
+    top_left_half: { x: 72, y: 88, width: 162, height: 156, depth: 14 },
+    top_right_half: { x: 286, y: 88, width: 162, height: 156, depth: 14 }
+  };
+  const topJoined = {
+    top_left_half: { x: 98, y: 82, width: 162, height: 156, depth: 14 },
+    top_right_half: { x: 260, y: 82, width: 162, height: 156, depth: 14 }
+  };
+  const frameOnly = {
+    apron_front: { x: 150, y: 144, width: 220, height: 16 },
+    apron_back: { x: 150, y: 218, width: 220, height: 16 },
+    apron_left: { x: 150, y: 158, width: 16, height: 76 },
+    apron_right: { x: 354, y: 158, width: 16, height: 76 }
+  };
+  const legs = {
+    leg_left_front: { x: 130, y: 152, width: 34, height: 128, tilt: -8 },
+    leg_left_back: { x: 174, y: 152, width: 30, height: 128, tilt: 6 },
+    leg_right_back: { x: 316, y: 152, width: 30, height: 128, tilt: -6 },
+    leg_right_front: { x: 358, y: 152, width: 34, height: 128, tilt: 8 }
+  };
+  const lowerBase = {
+    foot_left: { x: 116, y: 282, width: 120, height: 16 },
+    foot_right: { x: 284, y: 282, width: 120, height: 16 },
+    cross_beam_a: { x: 178, y: 254, width: 164, height: 14, angle: -17 },
+    cross_beam_b: { x: 178, y: 254, width: 164, height: 14, angle: 17 }
+  };
+  const fastenerPoints = {
+    top_frame: { points: [[174, 152], [240, 152], [280, 152], [346, 152], [174, 226], [240, 226], [280, 226], [346, 226]] },
+    leg_brackets: { points: [[156, 158], [186, 158], [334, 158], [364, 158], [156, 224], [186, 224], [334, 224], [364, 224]] },
+    levelers: { points: [[138, 300], [220, 300], [304, 300], [386, 300]] }
+  };
+  const assembled = {
+    ...topJoined,
+    seam_connector_top: { x: 236, y: 116, width: 48, height: 18 },
+    seam_connector_bottom: { x: 236, y: 196, width: 48, height: 18 },
+    ...frameOnly,
+    ...legs,
+    ...lowerBase
+  };
+
+  const topVisible = ["top_left_half", "top_right_half"];
+  const seamVisible = [...topVisible, "seam_connector_top", "seam_connector_bottom"];
+  const frameVisible = [...seamVisible, "apron_front", "apron_back", "apron_left", "apron_right"];
+  const legVisible = [...frameVisible, ...Object.keys(legs)];
+  const baseVisible = [...legVisible, "foot_left", "foot_right", "cross_beam_a", "cross_beam_b"];
+
+  return {
+    version: "0.4",
+    renderer: "strict_round_table_manual",
+    source: "local_instruction_contract",
+    source_note:
+      "Round table manual uses a deterministic instruction contract: the agent outputs parts, placements, fastener counts, insets, and state transitions; the renderer keeps the circular tabletop and visual language consistent.",
+    view_box: { width: 520, height: 360 },
+    parts,
+    frames: [
+      frame("Check the round tabletop halves", "Lay both halves on a padded floor and confirm the target diameter before joining.", [{ part_id: "top_left_half", quantity: 1 }, { part_id: "top_right_half", quantity: 1 }], topVisible, topVisible, topOpen, {
+        surface: "padded_floor",
+        arrows: [{ from: [234, 166], to: [258, 166] }, { from: [286, 166], to: [262, 166] }],
+        callouts: [{ text: "57 in diameter", x: 260, y: 64 }, { text: "padded floor", x: 112, y: 286 }]
+      }),
+      frame("Slide halves together", "Move the two straight seam edges together before tightening the connectors.", [{ part_id: "seam_connector_top", quantity: 1 }, { part_id: "seam_connector_bottom", quantity: 1 }], seamVisible, ["seam_connector_top", "seam_connector_bottom"], {
+        ...topJoined,
+        seam_connector_top: { x: 236, y: 116, width: 48, height: 18 },
+        seam_connector_bottom: { x: 236, y: 196, width: 48, height: 18 }
+      }, {
+        surface: "padded_floor",
+        insets: [{ type: "connector", label: "2x", x: 424, y: 236, r: 44, to: [262, 126] }],
+        arrows: [{ from: [234, 160], to: [258, 160] }, { from: [286, 160], to: [262, 160] }]
+      }),
+      frame("Lock the center seam", "Tighten the seam connectors only after the circular edge is flush.", [{ part_id: "bolt_set", quantity: 4 }], [...seamVisible, "bolt_set"], ["bolt_set"], {
+        ...topJoined,
+        seam_connector_top: { x: 236, y: 116, width: 48, height: 18 },
+        seam_connector_bottom: { x: 236, y: 196, width: 48, height: 18 },
+        bolt_set: { points: [[246, 125], [274, 125], [246, 205], [274, 205]] }
+      }, {
+        surface: "padded_floor",
+        insets: [{ type: "connector", label: "4x", x: 424, y: 94, r: 42, to: [260, 126] }],
+        callouts: [{ text: "flush seam", x: 260, y: 270 }]
+      }),
+      frame("Place the underside frame", "Center the rectangular frame on the underside of the round tabletop.", [{ part_id: "apron_front", quantity: 1 }, { part_id: "apron_back", quantity: 1 }, { part_id: "apron_left", quantity: 1 }, { part_id: "apron_right", quantity: 1 }], frameVisible, ["apron_front", "apron_back", "apron_left", "apron_right"], {
+        ...topJoined,
+        ...frameOnly,
+        seam_connector_top: { x: 236, y: 116, width: 48, height: 18 },
+        seam_connector_bottom: { x: 236, y: 196, width: 48, height: 18 }
+      }, {
+        surface: "padded_floor",
+        arrows: [{ from: [260, 100], to: [260, 142] }],
+        callouts: [{ text: "center frame", x: 260, y: 126 }]
+      }),
+      frame("Fasten the frame to the top", "Pre-drill and drive the eight frame screws into the underside only.", [{ part_id: "screw_set", quantity: 8 }], [...frameVisible, "screw_set"], ["screw_set"], {
+        ...assembled,
+        screw_set: fastenerPoints.top_frame
+      }, {
+        surface: "padded_floor",
+        insets: [{ type: "screw", label: "8x", x: 424, y: 98, r: 42, to: [346, 152] }]
+      }),
+      frame("Insert the left leg pair", "Drop the left two legs into the frame sockets before tightening.", [{ part_id: "leg_left_front", quantity: 1 }, { part_id: "leg_left_back", quantity: 1 }], [...frameVisible, "leg_left_front", "leg_left_back"], ["leg_left_front", "leg_left_back"], {
+        ...topJoined,
+        ...frameOnly,
+        seam_connector_top: { x: 236, y: 116, width: 48, height: 18 },
+        seam_connector_bottom: { x: 236, y: 196, width: 48, height: 18 },
+        leg_left_front: legs.leg_left_front,
+        leg_left_back: legs.leg_left_back
+      }, {
+        surface: "padded_floor",
+        arrows: [{ from: [146, 112], to: [146, 152] }, { from: [190, 112], to: [190, 152] }]
+      }),
+      frame("Insert the right leg pair", "Repeat on the right side and keep all four legs vertical before bolts.", [{ part_id: "leg_right_back", quantity: 1 }, { part_id: "leg_right_front", quantity: 1 }], legVisible, ["leg_right_back", "leg_right_front"], {
+        ...topJoined,
+        ...frameOnly,
+        ...legs,
+        seam_connector_top: { x: 236, y: 116, width: 48, height: 18 },
+        seam_connector_bottom: { x: 236, y: 196, width: 48, height: 18 }
+      }, {
+        surface: "padded_floor",
+        arrows: [{ from: [334, 112], to: [334, 152] }, { from: [376, 112], to: [376, 152] }]
+      }),
+      frame("Add lower foot rails", "Connect each leg pair with a lower rail so the base can stand square.", [{ part_id: "foot_left", quantity: 1 }, { part_id: "foot_right", quantity: 1 }], [...legVisible, "foot_left", "foot_right"], ["foot_left", "foot_right"], assembled, {
+        surface: "padded_floor",
+        arrows: [{ from: [176, 324], to: [176, 296] }, { from: [344, 324], to: [344, 296] }]
+      }),
+      frame("Install the first cross brace", "Add the first diagonal stretcher across the lower base.", [{ part_id: "cross_beam_a", quantity: 1 }], [...legVisible, "foot_left", "foot_right", "cross_beam_a"], ["cross_beam_a"], {
+        ...assembled,
+        cross_beam_b: { x: 178, y: 254, width: 164, height: 14, angle: 17 }
+      }, {
+        surface: "padded_floor",
+        arrows: [{ from: [112, 258], to: [172, 264] }]
+      }),
+      frame("Install the second cross brace", "Add the crossing stretcher to complete the X brace.", [{ part_id: "cross_beam_b", quantity: 1 }], baseVisible, ["cross_beam_b"], assembled, {
+        surface: "padded_floor",
+        arrows: [{ from: [408, 258], to: [348, 264] }],
+        callouts: [{ text: "X brace", x: 260, y: 250 }]
+      }),
+      frame("Tighten the leg brackets", "Tighten bracket bolts evenly, moving around the table once.", [{ part_id: "bolt_set", quantity: 8 }], [...baseVisible, "bolt_set"], ["bolt_set"], {
+        ...assembled,
+        bolt_set: fastenerPoints.leg_brackets
+      }, {
+        surface: "padded_floor",
+        insets: [{ type: "screw", label: "8x", x: 426, y: 92, r: 42, to: [364, 158] }]
+      }),
+      frame("Install the leveling feet", "Thread the four leveling feet into the bottom of the legs.", [{ part_id: "leveler_set", quantity: 4 }], [...baseVisible, "leveler_set"], ["leveler_set"], {
+        ...assembled,
+        leveler_set: fastenerPoints.levelers
+      }, {
+        surface: "padded_floor",
+        insets: [{ type: "leveler", label: "4x", x: 426, y: 92, r: 42, to: [386, 300] }]
+      }),
+      frame("Flip the table upright", "Use two people to rotate the table onto its feet without stressing the round top.", [], baseVisible, [], assembled, {
+        helper: "two_person_flip",
+        arrows: [{ from: [104, 110], to: [144, 78] }, { from: [406, 110], to: [366, 78] }],
+        callouts: [{ text: "2 people", x: 432, y: 282 }]
+      }),
+      frame("Level and finish", "Check height, level the feet, sand exposed edges, and apply thin finish coats.", [{ part_id: "sand_pass", quantity: 1 }, { part_id: "finish_coat", quantity: 1 }], [...baseVisible, "sand_pass", "finish_coat"], ["sand_pass", "finish_coat"], {
+        ...assembled,
+        sand_pass: { x: 88, y: 66, width: 344, height: 230 },
+        finish_coat: { x: 88, y: 66, width: 344, height: 230 }
+      }, {
+        callouts: [{ text: "29.5 in high", x: 428, y: 186 }, { text: "level feet", x: 260, y: 318 }]
+      })
+    ]
+  };
+}
+
+function roundTableInstructionModelLegacy(plan) {
+  const topMaterial = findMaterialName(plan, "round tabletop") || findMaterialName(plan, "plywood") || findMaterialName(plan, "panel") || "round tabletop panel";
+  const legMaterial = findMaterialName(plan, "2x4") || findMaterialName(plan, "leg") || "2x4 hardwood boards";
+  const railMaterial = findMaterialName(plan, "1x4") || findMaterialName(plan, "rail") || "1x4 hardwood boards";
+  const screwMaterial = findMaterialName(plan, "screw") || "wood screws 1-1/4 inch";
   const glueMaterial = findMaterialName(plan, "glue") || "interior wood glue";
   const finishMaterial = findMaterialName(plan, "polyurethane") || findMaterialName(plan, "finish") || "water based polyurethane satin";
 

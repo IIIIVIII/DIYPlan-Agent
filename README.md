@@ -44,7 +44,7 @@ The demo can run in two modes:
 - Structured DIY plan generation
 - Agent workflow console that shows observation, measurement, decomposition, routing, retrieval, manual generation, and verification stages
 - LEGO-inspired 2D instruction manual with per-step part bins, part decomposition, arrows, callouts, numbered pages, and step thumbnails
-- Round table manual path with 18 decomposed parts and 17 micro-assembly pages
+- Round table manual path with 21 decomposed parts and 14 strict assembly pages
 - Material list with quantities, rough costs, alternatives, and store search queries
 - Material cards that show which 2D parts each material produces
 - Tool list and visual step-by-step build instructions
@@ -171,6 +171,7 @@ Results UI
 ├── README.md                 # project overview and setup
 ├── docs/
 │   ├── product-brief.md      # product and research framing
+│   ├── instruction-model.md  # structured manual model and renderer contract
 │   └── routing-survey.md     # routing and agent benchmark survey
 ├── data/
 │   └── benchmark_cases.json  # deterministic benchmark fixtures
