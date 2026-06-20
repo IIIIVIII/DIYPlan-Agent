@@ -8,6 +8,7 @@ const form = document.querySelector("#plan-form");
 const generateButton = document.querySelector("#generate-button");
 const statusPill = document.querySelector("#status-pill");
 const liquidCanvas = document.querySelector("#liquid-canvas");
+const cursorGlow = document.querySelector("#cursor-glow");
 
 const emptyState = document.querySelector("#empty-state");
 const loadingState = document.querySelector("#loading-state");
@@ -17,8 +18,13 @@ const planOutput = document.querySelector("#plan-output");
 let imageDataUrl = "";
 let pointerX = 0.5;
 let pointerY = 0.5;
+const enhancedSelects = new Map();
+const motion = window.gsap;
 
 startLiquidCanvas();
+startCursorGlow();
+enhanceSelects();
+animateInitialView();
 checkHealth();
 
 imageInput.addEventListener("change", async (event) => {
@@ -83,6 +89,7 @@ function hydrateRoutingStrategies(strategies) {
         `<option value="${escapeHtml(strategy.id)}">${escapeHtml(strategy.label)}</option>`
     )
     .join("");
+  enhanceSelect(select);
 }
 
 async function setImageFromFile(file) {
@@ -167,6 +174,7 @@ function renderPlan(result) {
   renderRouting(result.routing_policy);
   renderTrace(result.trace);
   document.querySelector("#json-output").textContent = JSON.stringify(result, null, 2);
+  animateResultView();
 }
 
 function renderMetrics(result) {
@@ -227,29 +235,41 @@ function renderResearchScores(result) {
 
 function renderMaterials(materials, purchaseLinks) {
   const linksByName = new Map(purchaseLinks.map((item) => [item.material, item]));
-  document.querySelector("#materials-body").innerHTML = materials
-    .map((material) => {
+  document.querySelector("#materials-bento").innerHTML = materials
+    .map((material, index) => {
       const links = linksByName.get(material.name);
       return `
-        <tr>
-          <td>
-            <strong>${escapeHtml(material.name)}</strong><br />
-            <span>${escapeHtml(material.notes)}</span>
-          </td>
-          <td>${escapeHtml(`${material.quantity} ${material.unit}`)}</td>
-          <td>$${Number(material.estimated_unit_cost_usd).toFixed(0)} ea.</td>
-          <td>
+        <article class="material-card magnetic" style="--i: ${index}">
+          <div class="card-glow"></div>
+          <div class="material-card-top">
+            <span class="material-index">${String(index + 1).padStart(2, "0")}</span>
+            <span class="material-category">${escapeHtml(material.category)}</span>
+          </div>
+          <h4>${escapeHtml(material.name)}</h4>
+          <p>${escapeHtml(material.notes)}</p>
+          <div class="material-stats">
+            <span><strong>${escapeHtml(material.quantity)}</strong>${escapeHtml(material.unit)}</span>
+            <span><strong>$${Number(material.estimated_unit_cost_usd).toFixed(0)}</strong>each</span>
+          </div>
+          <div class="material-links">
             ${
               links
-                ? `<a href="${links.home_depot}" target="_blank" rel="noreferrer">Home Depot</a><br />
+                ? `<a href="${links.home_depot}" target="_blank" rel="noreferrer">Home Depot</a>
                    <a href="${links.lowes}" target="_blank" rel="noreferrer">Lowe's</a>`
-                : "N/A"
+                : "<span>N/A</span>"
             }
-          </td>
-        </tr>
+          </div>
+          <div class="alternatives">
+            ${(material.alternatives || [])
+              .slice(0, 3)
+              .map((item) => `<span>${escapeHtml(item)}</span>`)
+              .join("")}
+          </div>
+        </article>
       `;
     })
     .join("");
+  bindMagneticCards();
 }
 
 function renderSteps(steps) {
@@ -337,6 +357,194 @@ function sampleImageDataUrl() {
     </svg>
   `;
   return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
+function enhanceSelects() {
+  document.querySelectorAll("select").forEach((select) => enhanceSelect(select));
+  document.addEventListener("click", (event) => {
+    for (const { root, close } of enhancedSelects.values()) {
+      if (!root.contains(event.target)) close();
+    }
+  });
+}
+
+function enhanceSelect(select) {
+  if (!select) return;
+
+  const existing = enhancedSelects.get(select);
+  if (existing) {
+    existing.render();
+    return;
+  }
+
+  select.classList.add("native-select");
+  const root = document.createElement("div");
+  root.className = "liquid-select";
+  root.dataset.selectFor = select.id;
+  root.innerHTML = `
+    <button class="liquid-select-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+      <span></span>
+      <i></i>
+    </button>
+    <div class="liquid-select-menu" role="listbox"></div>
+  `;
+  select.insertAdjacentElement("afterend", root);
+
+  const button = root.querySelector(".liquid-select-button");
+  const label = button.querySelector("span");
+  const menu = root.querySelector(".liquid-select-menu");
+
+  const close = () => {
+    root.classList.remove("open");
+    button.setAttribute("aria-expanded", "false");
+    if (motion) {
+      motion.to(menu, {
+        autoAlpha: 0,
+        y: -8,
+        scale: 0.98,
+        duration: 0.18,
+        ease: "power2.out",
+        pointerEvents: "none"
+      });
+    }
+  };
+
+  const open = () => {
+    for (const entry of enhancedSelects.values()) {
+      if (entry.root !== root) entry.close();
+    }
+    root.classList.add("open");
+    button.setAttribute("aria-expanded", "true");
+    if (motion) {
+      motion.fromTo(
+        menu,
+        { autoAlpha: 0, y: -8, scale: 0.98 },
+        { autoAlpha: 1, y: 0, scale: 1, duration: 0.22, ease: "power3.out", pointerEvents: "auto" }
+      );
+      motion.fromTo(
+        menu.querySelectorAll(".liquid-select-option"),
+        { x: -8, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.18, stagger: 0.025, ease: "power2.out" }
+      );
+    }
+  };
+
+  const render = () => {
+    const selected = select.options[select.selectedIndex] || select.options[0];
+    label.textContent = selected?.textContent || "";
+    menu.innerHTML = Array.from(select.options)
+      .map(
+        (option) => `
+          <button class="liquid-select-option${option.value === select.value ? " selected" : ""}" type="button" role="option" aria-selected="${option.value === select.value}" data-value="${escapeHtml(option.value)}">
+            <span>${escapeHtml(option.textContent)}</span>
+          </button>
+        `
+      )
+      .join("");
+  };
+
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    root.classList.contains("open") ? close() : open();
+  });
+
+  menu.addEventListener("click", (event) => {
+    const option = event.target.closest(".liquid-select-option");
+    if (!option) return;
+    select.value = option.dataset.value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    render();
+    close();
+  });
+
+  select.addEventListener("change", render);
+  enhancedSelects.set(select, { root, render, close });
+  render();
+  close();
+}
+
+function animateInitialView() {
+  if (!motion) return;
+  motion.from(".topbar", { y: -18, opacity: 0, duration: 0.55, ease: "power3.out" });
+  motion.from(".input-panel", { x: -24, opacity: 0, duration: 0.72, delay: 0.08, ease: "power3.out" });
+  motion.from(".results-panel", { x: 24, opacity: 0, duration: 0.72, delay: 0.12, ease: "power3.out" });
+  motion.from(".empty-grid span", {
+    y: 22,
+    opacity: 0,
+    duration: 0.48,
+    delay: 0.32,
+    stagger: 0.05,
+    ease: "power3.out"
+  });
+}
+
+function animateResultView() {
+  if (!motion) return;
+  const targets = [
+    ".plan-header",
+    ".metric",
+    ".mini-score",
+    ".material-card",
+    ".steps-list li",
+    ".trace-item"
+  ];
+  motion.fromTo(
+    targets.join(","),
+    { y: 24, opacity: 0, filter: "blur(8px)" },
+    {
+      y: 0,
+      opacity: 1,
+      filter: "blur(0px)",
+      duration: 0.55,
+      stagger: 0.025,
+      ease: "power3.out"
+    }
+  );
+  bindMagneticCards();
+}
+
+function bindMagneticCards() {
+  document.querySelectorAll(".magnetic, .metric, .mini-score").forEach((card) => {
+    if (card.dataset.magneticBound) return;
+    card.dataset.magneticBound = "true";
+    card.addEventListener("pointermove", (event) => {
+      const rect = card.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+      const y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+      card.style.setProperty("--mx", `${(event.clientX - rect.left).toFixed(1)}px`);
+      card.style.setProperty("--my", `${(event.clientY - rect.top).toFixed(1)}px`);
+      if (motion) {
+        motion.to(card, {
+          rotateX: -y * 4,
+          rotateY: x * 5,
+          y: -2,
+          duration: 0.28,
+          ease: "power2.out"
+        });
+      }
+    });
+    card.addEventListener("pointerleave", () => {
+      if (motion) {
+        motion.to(card, { rotateX: 0, rotateY: 0, y: 0, duration: 0.35, ease: "power2.out" });
+      }
+    });
+  });
+}
+
+function startCursorGlow() {
+  if (!cursorGlow || window.matchMedia("(pointer: coarse)").matches) return;
+  window.addEventListener("pointermove", (event) => {
+    if (motion) {
+      motion.to(cursorGlow, {
+        x: event.clientX,
+        y: event.clientY,
+        duration: 0.35,
+        ease: "power3.out"
+      });
+    } else {
+      cursorGlow.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`;
+    }
+  });
 }
 
 function startLiquidCanvas() {

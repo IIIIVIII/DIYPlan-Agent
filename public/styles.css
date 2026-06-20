@@ -65,8 +65,8 @@ a {
   position: fixed;
   inset: 0;
   z-index: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background: #050605;
   filter: saturate(1.05) contrast(1.08);
 }
@@ -82,6 +82,20 @@ a {
     linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
   background-size: 3px 3px, 4px 4px;
   mix-blend-mode: overlay;
+}
+
+.cursor-glow {
+  position: fixed;
+  z-index: 4;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.22;
+  background: radial-gradient(circle, rgba(213, 255, 87, 0.35), rgba(139, 178, 255, 0.12) 42%, transparent 70%);
+  filter: blur(18px);
+  mix-blend-mode: screen;
+  transform: translate(-50%, -50%);
 }
 
 .app-shell {
@@ -416,6 +430,10 @@ h3 {
   gap: 7px;
 }
 
+.control-grid label {
+  position: relative;
+}
+
 .control-grid span,
 .tools-field legend {
   color: rgba(246, 240, 223, 0.72);
@@ -434,6 +452,145 @@ select {
   background: rgba(2, 3, 2, 0.44);
   color: var(--cream);
   padding: 10px 12px;
+}
+
+.native-select {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.liquid-select {
+  position: relative;
+  z-index: 6;
+}
+
+.liquid-select.open {
+  z-index: 80;
+}
+
+.liquid-select-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  overflow: hidden;
+  border: 1px solid rgba(246, 240, 223, 0.16);
+  border-radius: 4px;
+  background:
+    radial-gradient(circle at var(--mx, 20%) var(--my, 20%), rgba(213, 255, 87, 0.14), transparent 36%),
+    rgba(2, 3, 2, 0.48);
+  color: var(--cream);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.liquid-select-button span {
+  color: var(--cream);
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.liquid-select-button i {
+  width: 9px;
+  height: 9px;
+  border-right: 1.8px solid rgba(246, 240, 223, 0.78);
+  border-bottom: 1.8px solid rgba(246, 240, 223, 0.78);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 180ms ease;
+}
+
+.liquid-select.open .liquid-select-button {
+  border-color: rgba(213, 255, 87, 0.55);
+  box-shadow: 0 0 0 3px rgba(213, 255, 87, 0.1);
+}
+
+.liquid-select.open .liquid-select-button i {
+  transform: rotate(225deg) translate(-2px, -1px);
+}
+
+.liquid-select-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  z-index: 20;
+  overflow-y: auto;
+  max-height: 282px;
+  border: 1px solid rgba(246, 240, 223, 0.26);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(213, 255, 87, 0.18), transparent 34%),
+    radial-gradient(circle at 100% 60%, rgba(139, 178, 255, 0.15), transparent 38%),
+    linear-gradient(180deg, rgba(16, 18, 14, 0.99), rgba(4, 5, 4, 0.99));
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.68),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 8px;
+  backdrop-filter: blur(28px);
+  transform-origin: top;
+  isolation: isolate;
+}
+
+.liquid-select-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 42px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  color: rgba(246, 240, 223, 0.78);
+  padding: 9px 12px;
+  text-align: left;
+}
+
+.liquid-select-option::before {
+  position: absolute;
+  inset: 4px;
+  border-radius: 999px;
+  background: rgba(246, 240, 223, 0.08);
+  opacity: 0;
+  content: "";
+  transition: opacity 160ms ease;
+}
+
+.liquid-select-option span {
+  position: relative;
+  z-index: 1;
+  color: inherit;
+  font-size: 0.98rem;
+  font-weight: 850;
+  text-transform: none;
+}
+
+.liquid-select-option:hover,
+.liquid-select-option.selected {
+  border-color: rgba(246, 240, 223, 0.12);
+  color: var(--cream);
+}
+
+.liquid-select-option:hover::before,
+.liquid-select-option.selected::before {
+  opacity: 1;
+}
+
+.liquid-select-option.selected::after {
+  position: absolute;
+  right: 13px;
+  width: 9px;
+  height: 14px;
+  border-right: 2px solid var(--acid);
+  border-bottom: 2px solid var(--acid);
+  content: "";
+  transform: rotate(42deg);
 }
 
 input[type="text"]:focus,
@@ -664,6 +821,182 @@ code {
   border-top: 1px solid var(--line);
 }
 
+.materials-bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.material-card {
+  position: relative;
+  grid-column: span 4;
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid rgba(246, 240, 223, 0.15);
+  border-radius: 6px;
+  background:
+    radial-gradient(circle at var(--mx, 20%) var(--my, 20%), rgba(213, 255, 87, 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)),
+    rgba(2, 3, 2, 0.36);
+  padding: 18px;
+  transform-style: preserve-3d;
+}
+
+.material-card:nth-child(5n + 1),
+.material-card:nth-child(5n + 4) {
+  grid-column: span 5;
+}
+
+.material-card:nth-child(5n + 2) {
+  grid-column: span 7;
+}
+
+.material-card::before {
+  position: absolute;
+  inset: -40% -30%;
+  background:
+    conic-gradient(from calc(var(--i, 0) * 40deg), transparent, rgba(213, 255, 87, 0.14), transparent, rgba(139, 178, 255, 0.11), transparent);
+  opacity: 0;
+  content: "";
+  transition: opacity 220ms ease;
+}
+
+.material-card:hover::before {
+  opacity: 1;
+  animation: cardSpin 7s linear infinite;
+}
+
+@keyframes cardSpin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.card-glow {
+  position: absolute;
+  right: -22%;
+  bottom: -18%;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(234, 211, 160, 0.22), transparent 68%);
+  filter: blur(10px);
+}
+
+.material-card-top,
+.material-stats,
+.material-links,
+.alternatives {
+  position: relative;
+  z-index: 1;
+}
+
+.material-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.material-index {
+  color: rgba(246, 240, 223, 0.38);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.material-category {
+  border: 1px solid rgba(213, 255, 87, 0.26);
+  border-radius: 999px;
+  background: rgba(213, 255, 87, 0.08);
+  color: var(--acid);
+  padding: 5px 9px;
+  font-size: 0.66rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.material-card h4 {
+  position: relative;
+  z-index: 1;
+  max-width: 11ch;
+  margin: 0 0 12px;
+  color: var(--cream);
+  font-size: clamp(1.5rem, 3vw, 2.7rem);
+  font-weight: 720;
+  line-height: 0.96;
+  text-transform: lowercase;
+}
+
+.material-card p {
+  position: relative;
+  z-index: 1;
+  max-width: 34rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.material-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 18px 0 14px;
+}
+
+.material-stats span {
+  display: grid;
+  min-height: 62px;
+  align-content: center;
+  border: 1px solid rgba(246, 240, 223, 0.12);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(246, 240, 223, 0.55);
+  padding: 10px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.material-stats strong {
+  color: var(--cream);
+  font-size: 1.32rem;
+}
+
+.material-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.material-links a,
+.alternatives span {
+  border: 1px solid rgba(246, 240, 223, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--cream);
+  padding: 7px 10px;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.material-links a:hover {
+  border-color: rgba(213, 255, 87, 0.46);
+  color: var(--acid);
+}
+
+.alternatives {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.alternatives span {
+  color: rgba(246, 240, 223, 0.56);
+  font-size: 0.68rem;
+}
+
 .two-column-band {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -843,6 +1176,13 @@ pre {
   .two-column-band {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .material-card,
+  .material-card:nth-child(5n + 1),
+  .material-card:nth-child(5n + 2),
+  .material-card:nth-child(5n + 4) {
+    grid-column: span 6;
+  }
 }
 
 @media (max-width: 720px) {
@@ -883,5 +1223,20 @@ pre {
   .trace-item {
     grid-template-columns: 1fr;
     gap: 5px;
+  }
+
+  .material-card,
+  .material-card:nth-child(5n + 1),
+  .material-card:nth-child(5n + 2),
+  .material-card:nth-child(5n + 4) {
+    grid-column: 1 / -1;
+  }
+
+  .material-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .cursor-glow {
+    display: none;
   }
 }
