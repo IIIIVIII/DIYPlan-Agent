@@ -1,24 +1,61 @@
 # DIYPlan Agent
 
-DIYPlan Agent is a local demo for a multimodal agent workflow that turns a furniture inspiration image into a safer, simplified DIY build plan.
+DIYPlan Agent is a local-first demo for a multimodal agent workflow that turns a furniture inspiration image into a safer, simplified DIY build plan.
 
-The product surface is intentionally narrow: side tables, coffee tables, bookshelves, and nightstands. The research surface is broader: routing, evaluation, structured generation, local verification, and cloud-vs-local inference tradeoffs for real agent workloads.
+The user-facing idea is simple: upload a photo of a table, shelf, coffee table, or nightstand, then get a material list, tool list, build steps, rough cost estimate, safety notes, and hardware-store search links.
 
-## Demo Scope
+The technical framing is the more important part: this project treats DIY furniture planning as a realistic multimodal agent workload for studying model routing, structured generation, verification, latency, and cost.
 
-- Upload a furniture inspiration image.
-- Generate a structured DIY plan with materials, tools, steps, cost estimate, and safety checks.
-- Add store search links for Home Depot, Lowe's, and local hardware stores.
-- Show a stage-by-stage execution trace.
-- Expose a routing policy for future small-model and local-inference experiments.
+## Why This Project Exists
 
-The app runs without dependencies. If `OPENAI_API_KEY` is configured, it uses the OpenAI Responses API with image input and JSON schema output. If not, it runs in deterministic mock mode so the UI and workflow can still be reviewed.
+Many furniture products are expensive, while many people in the US are comfortable with basic home improvement work. The hard part is not finding inspiration. The hard part is turning a visual reference into a buildable plan:
 
-## Run Locally
+- What object is in the image?
+- Which visible parts matter structurally?
+- What materials are realistic for a beginner?
+- Which dimensions need to be confirmed?
+- Which steps are safe, and which should be avoided?
+- What can be bought at common hardware stores?
+- Which agent stages actually need an expensive multimodal model?
+
+This makes the product a useful sandbox for both a consumer AI workflow and an ML systems / inference research direction.
+
+## Current Demo
+
+The current MVP supports a narrow low-risk furniture scope:
+
+- side tables
+- coffee tables
+- bookshelves
+- nightstands
+
+It intentionally avoids high-risk work such as electrical wiring, ceiling-mounted structures, complex load-bearing furniture, plumbing, gas, or anything that should require a qualified professional.
+
+The demo can run in two modes:
+
+- **Cloud mode**: if `OPENAI_API_KEY` is configured, the server calls the OpenAI Responses API with image input and structured JSON output.
+- **Mock mode**: if no API key is configured, the app returns a deterministic sample plan so the UI, trace, and routing concepts can still be reviewed locally.
+
+## Features
+
+- Image upload with preview
+- Sample furniture image for quick testing
+- Structured DIY plan generation
+- Material list with quantities, rough costs, alternatives, and store search queries
+- Tool list and step-by-step build instructions
+- Safety and feasibility checks
+- Zip-code-aware local hardware search links
+- Home Depot and Lowe's search links
+- Execution trace for each workflow stage
+- Routing policy showing which stages could move to strong cloud models, cheaper models, local models, or deterministic rules
+- Raw JSON output for future evaluation and benchmark work
+
+## Quick Start
+
+This project has no npm package dependencies. It uses Node's built-in HTTP server and browser APIs.
 
 ```bash
-cp .env.example .env
-# Add OPENAI_API_KEY to .env for cloud mode.
+cd ~/Desktop/DIYPlan-Agent
 npm run dev
 ```
 
@@ -28,6 +65,45 @@ Open:
 http://localhost:5173
 ```
 
+On macOS, you can also double-click:
+
+```text
+START_DEMO.command
+```
+
+That script opens the local URL and starts the dev server from the project folder.
+
+## Cloud Mode Setup
+
+Create a `.env` file:
+
+```bash
+cp .env.example .env
+```
+
+Add your API key:
+
+```env
+OPENAI_API_KEY=your_api_key_here
+```
+
+Optional model configuration:
+
+```env
+OPENAI_MODEL=gpt-5.5-mini
+OPENAI_STRONG_MODEL=gpt-5.5
+OPENAI_ROUTER_MODEL=gpt-5.5-mini
+PORT=5173
+```
+
+Then run:
+
+```bash
+npm run dev
+```
+
+If `OPENAI_API_KEY` is missing, the app still works in mock mode.
+
 ## Useful Commands
 
 ```bash
@@ -35,31 +111,203 @@ npm run check
 npm run dev
 ```
 
+`npm run check` performs syntax checks on the server-side JavaScript files.
+
+## Product Flow
+
+1. User uploads a furniture inspiration image.
+2. User optionally provides category, target size, budget, skill level, zip code, and available tools.
+3. The system generates a simplified inspired-by plan instead of copying the original design.
+4. The local verifier flags missing inputs, unsafe work, and cost inconsistencies.
+5. The material linker produces store search links.
+6. The UI displays the plan, trace, routing policy, and structured output.
+
+## System Architecture
+
+```text
+Browser UI
+  |
+  | image + constraints
+  v
+Node local server
+  |
+  |-- input normalization
+  |-- multimodal planning call, when API key is available
+  |-- deterministic fallback plan, when API key is not available
+  |-- local safety and feasibility verifier
+  |-- material-to-store search linking
+  |-- routing policy trace
+  v
+Structured DIY plan JSON
+  |
+  v
+Results UI
+```
+
+## Repository Structure
+
+```text
+.
+├── START_DEMO.command        # macOS double-click launcher
+├── README.md                 # project overview and setup
+├── docs/
+│   └── product-brief.md      # product and research framing
+├── public/
+│   ├── index.html            # app shell
+│   ├── styles.css            # responsive UI styling
+│   └── app.js                # browser-side interaction and rendering
+├── src/
+│   ├── materialCatalog.js    # small local material catalog and store links
+│   ├── openai.js             # OpenAI Responses API call
+│   ├── planner.js            # workflow orchestration and verifier
+│   └── schema.js             # structured output schema
+├── server.js                 # local HTTP server and API routes
+├── package.json              # scripts
+└── .env.example              # local environment template
+```
+
+## API Endpoints
+
+### `GET /api/health`
+
+Returns server status and whether cloud mode is configured.
+
+Example:
+
+```json
+{
+  "ok": true,
+  "cloudModelConfigured": false,
+  "defaultModel": "gpt-5.5-mini"
+}
+```
+
+### `POST /api/generate-plan`
+
+Generates a DIY plan.
+
+Example request:
+
+```json
+{
+  "imageDataUrl": "data:image/png;base64,...",
+  "furnitureType": "side table",
+  "targetSize": "24 W x 18 D x 24 H in",
+  "budget": "$80 - $140",
+  "skillLevel": "beginner",
+  "zipcode": "90024",
+  "tools": ["drill", "saw"]
+}
+```
+
+Example response shape:
+
+```json
+{
+  "mode": "cloud",
+  "metrics": {
+    "total_latency_ms": 1200,
+    "cloud_latency_ms": 1130,
+    "model": "gpt-5.5-mini",
+    "estimated_call_count": 1
+  },
+  "routing_policy": [],
+  "trace": [],
+  "plan": {},
+  "purchase_links": []
+}
+```
+
 ## Technical Framing
 
-This is not meant to be just a consumer app wrapper. The furniture task acts as a concrete workload for:
+This project is deliberately scoped as more than a consumer app wrapper. The furniture task becomes a concrete workload for:
 
 - multimodal image understanding
-- structured plan generation
+- structured output generation
 - retrieval-aware material selection
 - agent tool use
 - local safety and consistency verification
-- model routing between strong cloud models, cheaper models, and local rules
-- evaluation across quality, latency, and cost
+- cost-aware model routing
+- cloud-vs-local inference tradeoffs
+- workflow-level evaluation
 
-## Next Research Directions
+The key research question is:
 
-1. Split the current single cloud call into explicit stages: image understanding, planner, material retriever, verifier, and formatter.
-2. Add a small benchmark set of furniture images and human-readable expected constraints.
-3. Compare routing strategies: all-frontier model, small-model-first with fallback, and local verifier plus cloud planner.
-4. Add live or semi-live catalog adapters if official store APIs or data feeds are available.
-5. Measure per-stage latency, token cost, failure rate, and plan buildability.
+> How can a multimodal agent complete a practical real-world planning task while keeping quality high, latency acceptable, and model cost low?
+
+## Routing Research Direction
+
+The first demo uses one cloud call for simplicity. A stronger research version would split the workflow into explicit stages:
+
+1. **Image understanding**
+   - Strong multimodal model.
+   - Extract furniture type, visible components, style, and likely materials.
+
+2. **Planner**
+   - Medium or strong model.
+   - Convert extracted visual features and user constraints into a buildable plan.
+
+3. **Material matcher**
+   - Retrieval plus local rules.
+   - Map required parts to common hardware-store materials.
+
+4. **Verifier**
+   - Local rules plus small judge model.
+   - Catch missing dimensions, unsafe tasks, high-risk categories, and cost inconsistencies.
+
+5. **Formatter**
+   - Small model or deterministic renderer.
+   - Produce user-friendly steps and structured JSON.
+
+This would allow experiments such as:
+
+- all-strong-model baseline
+- small-model-first with strong-model fallback
+- local verifier plus cloud planner
+- local material matcher plus cloud image understanding
+- cached retrieval and repeated-stage reuse
+
+## Evaluation Plan
+
+A useful next step is to build a small benchmark set of furniture images and compare different model-routing policies.
+
+Possible metrics:
+
+- **Buildability**: can a beginner reasonably follow the plan?
+- **Completeness**: are materials, tools, steps, dimensions, and safety notes present?
+- **Material accuracy**: are suggested materials realistic and purchasable?
+- **Safety**: does the agent avoid electrical, structural, or high-risk work?
+- **Cost realism**: are rough estimates aligned with itemized materials?
+- **Latency**: how long does the full workflow take?
+- **Model cost**: how much does each routing strategy cost per generated plan?
+- **Failure rate**: how often does the workflow produce invalid JSON or unusable output?
 
 ## Safety and IP Notes
 
-The app should generate inspired-by alternatives rather than copying branded furniture. It should avoid electrical work, structural work, and high-risk furniture categories unless reviewed by a qualified person.
+This project should generate inspired-by alternatives, not exact copies of branded furniture designs.
 
-## References
+The system should not be treated as professional engineering, electrical, or structural advice. It is a prototype for low-risk DIY planning. Real builds should be reviewed by a qualified person when safety matters.
 
-- OpenAI vision/image input docs: https://platform.openai.com/docs/guides/images-vision
-- OpenAI structured outputs docs: https://platform.openai.com/docs/guides/structured-outputs
+The current MVP intentionally avoids:
+
+- electrical wiring
+- ceiling-mounted structures
+- large load-bearing furniture
+- plumbing or gas work
+- child safety furniture
+- furniture intended to hold heavy dynamic loads
+
+## Roadmap
+
+- Add screenshots or a short demo video to the README.
+- Add a real image-understanding stage separate from plan generation.
+- Add a small furniture image benchmark.
+- Add per-stage token and latency instrumentation.
+- Add model-routing policies as selectable experiments.
+- Add a local retrieval index for materials and DIY constraints.
+- Add a stronger verifier for unsafe or unbuildable plans.
+- Add optional live catalog adapters if reliable store APIs or feeds are available.
+
+## Current Status
+
+This is an early local demo. It is useful for showing the product concept and the research framing, but it is not yet a production DIY planning system.
