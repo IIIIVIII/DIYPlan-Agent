@@ -41,8 +41,10 @@ The demo can run in two modes:
 - Image upload with preview
 - Sample furniture image for quick testing
 - Structured DIY plan generation
+- 2D visual instruction manual with part decomposition, assembly frames, arrows, callouts, and step thumbnails
 - Material list with quantities, rough costs, alternatives, and store search queries
-- Tool list and step-by-step build instructions
+- Material cards that show which 2D parts each material produces
+- Tool list and visual step-by-step build instructions
 - Safety and feasibility checks
 - Zip-code-aware local hardware search links
 - Home Depot and Lowe's search links
@@ -147,6 +149,7 @@ Node local server
   |-- routing strategy selection
   |-- local safety and feasibility verifier
   |-- material-to-store search linking
+  |-- local 2D instruction model generation
   |-- quality evaluator and escalation trigger detector
   |-- routing policy trace
   v

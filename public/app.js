@@ -168,8 +168,10 @@ function renderPlan(result) {
 
   renderMetrics(result);
   renderResearchScores(result);
-  renderMaterials(plan.materials, result.purchase_links);
-  renderSteps(plan.steps);
+  const instructionModel = getInstructionModel(plan);
+  renderInstructionManual(instructionModel);
+  renderMaterials(plan.materials, result.purchase_links, instructionModel);
+  renderSteps(plan.steps, instructionModel);
   renderVerifier(plan);
   renderRouting(result.routing_policy);
   renderTrace(result.trace);
@@ -233,17 +235,22 @@ function renderResearchScores(result) {
     : "<li>No major evaluator issues detected.</li>";
 }
 
-function renderMaterials(materials, purchaseLinks) {
+function renderMaterials(materials, purchaseLinks, instructionModel) {
   const linksByName = new Map(purchaseLinks.map((item) => [item.material, item]));
+  const partsByMaterial = groupPartsByMaterial(instructionModel.parts || []);
   document.querySelector("#materials-bento").innerHTML = materials
     .map((material, index) => {
       const links = linksByName.get(material.name);
+      const parts = partsByMaterial.get(normalizeKey(material.name)) || [];
       return `
         <article class="material-card magnetic" style="--i: ${index}">
           <div class="card-glow"></div>
           <div class="material-card-top">
             <span class="material-index">${String(index + 1).padStart(2, "0")}</span>
             <span class="material-category">${escapeHtml(material.category)}</span>
+          </div>
+          <div class="material-visuals">
+            ${parts.length ? parts.slice(0, 4).map((part) => renderPartChip(part)).join("") : renderGenericMaterialChip(material)}
           </div>
           <h4>${escapeHtml(material.name)}</h4>
           <p>${escapeHtml(material.notes)}</p>
@@ -272,18 +279,315 @@ function renderMaterials(materials, purchaseLinks) {
   bindMagneticCards();
 }
 
-function renderSteps(steps) {
-  document.querySelector("#steps-list").innerHTML = steps
-    .map(
-      (step) => `
-        <li>
-          <strong>${escapeHtml(step.title)} <span>(${step.estimated_minutes} min)</span></strong>
-          <p>${escapeHtml(step.detail)}</p>
-          <p>${escapeHtml(step.safety_notes)}</p>
+function renderSteps(steps, instructionModel) {
+  const frames = instructionModel.frames || [];
+  const stepItems = frames.length
+    ? frames.map((frame, index) => ({
+        title: frame.title,
+        detail: frame.caption,
+        estimated_minutes: steps[index]?.estimated_minutes || 20,
+        safety_notes: steps[index]?.safety_notes || "Confirm fit before fastening.",
+        frame
+      }))
+    : steps.map((step) => ({ ...step, frame: null }));
+
+  document.querySelector("#steps-list").innerHTML = stepItems
+    .map((step, index) => {
+      const frame = frames[index] || frames[frames.length - 1] || null;
+      return `
+        <li class="manual-step-card">
+          <div class="step-thumb">
+            ${frame ? renderInstructionSvg(instructionModel, frame, { compact: true }) : ""}
+          </div>
+          <div class="step-copy">
+            <span class="step-number">${String(index + 1).padStart(2, "0")}</span>
+            <strong>${escapeHtml(step.title)} <span>(${step.estimated_minutes} min)</span></strong>
+            <p>${escapeHtml(step.detail)}</p>
+            <p>${escapeHtml(step.safety_notes)}</p>
+          </div>
         </li>
+      `;
+    })
+    .join("");
+}
+
+function renderInstructionManual(instructionModel) {
+  const parts = instructionModel.parts || [];
+  const frames = instructionModel.frames || [];
+  document.querySelector("#instruction-mode").textContent = humanizeRenderer(instructionModel.renderer || "2D vector");
+  document.querySelector("#instruction-note").textContent = instructionModel.source_note || "";
+  document.querySelector("#parts-tray").innerHTML = `
+    <div class="parts-tray-header">
+      <span>${parts.length} parts</span>
+      <strong>Cut + assembly inventory</strong>
+    </div>
+    <div class="parts-inventory-grid">
+      ${parts.map((part) => renderInventoryPart(part)).join("")}
+    </div>
+  `;
+  document.querySelector("#instruction-pages").innerHTML = frames
+    .map(
+      (frame, index) => `
+        <article class="manual-page">
+          <div class="manual-page-head">
+            <span>${String(index + 1).padStart(2, "0")}</span>
+            <div>
+              <h4>${escapeHtml(frame.title)}</h4>
+              <p>${escapeHtml(frame.caption)}</p>
+            </div>
+          </div>
+          ${renderInstructionSvg(instructionModel, frame)}
+        </article>
       `
     )
     .join("");
+}
+
+function getInstructionModel(plan) {
+  if (plan.instruction_model?.parts?.length && plan.instruction_model?.frames?.length) {
+    return plan.instruction_model;
+  }
+
+  return {
+    version: "client-fallback",
+    renderer: "2d_vector_manual",
+    source_note: "Client fallback: generated a simple 2D manual from the material and step list.",
+    view_box: { width: 520, height: 360 },
+    parts: (plan.materials || []).slice(0, 6).map((material, index) => ({
+      id: `material_${index}`,
+      label: material.name,
+      kind: material.category === "fastener" ? "fastener_set" : "panel",
+      material_name: material.name,
+      cut_size: material.unit,
+      quantity: material.quantity,
+      geometry: { x: 70 + (index % 3) * 140, y: 74 + Math.floor(index / 3) * 104, width: 104, height: 54 }
+    })),
+    frames: (plan.steps || []).slice(0, 5).map((step, index, steps) => ({
+      title: step.title,
+      caption: step.detail,
+      visible_parts: (plan.materials || []).slice(0, Math.min(index + 2, 6)).map((_, partIndex) => `material_${partIndex}`),
+      highlight_parts: [`material_${Math.min(index, Math.max(steps.length - 1, 0))}`],
+      placements: {}
+    }))
+  };
+}
+
+function renderInventoryPart(part) {
+  return `
+    <article class="part-inventory-card">
+      ${renderPartChip(part)}
+      <div>
+        <strong>${escapeHtml(part.label)}</strong>
+        <span>${escapeHtml(part.cut_size || part.material_name || "part")}</span>
+      </div>
+      <small>x${escapeHtml(part.quantity || 1)}</small>
+    </article>
+  `;
+}
+
+function renderPartChip(part) {
+  return `
+    <span class="part-chip">
+      <svg viewBox="0 0 120 76" aria-hidden="true">
+        ${renderMiniPartShape(part)}
+      </svg>
+      <em>${escapeHtml(part.label)}</em>
+    </span>
+  `;
+}
+
+function renderGenericMaterialChip(material) {
+  const part = {
+    label: material.category || "material",
+    kind: material.category === "fastener" ? "fastener_set" : "panel",
+    material_name: material.name,
+    quantity: material.quantity || 1,
+    cut_size: material.unit || ""
+  };
+  return renderPartChip(part);
+}
+
+function renderMiniPartShape(part) {
+  if (part.kind === "fastener_set") {
+    return [0, 1, 2, 3, 4, 5]
+      .map((index) => `<circle class="mini-fastener" cx="${32 + (index % 3) * 28}" cy="${26 + Math.floor(index / 3) * 22}" r="5" />`)
+      .join("");
+  }
+
+  if (part.kind === "adhesive_lines") {
+    return `
+      <path class="mini-adhesive" d="M22 26 C 42 12, 58 42, 78 26 S 102 36, 104 24" />
+      <path class="mini-adhesive" d="M20 48 C 42 34, 60 60, 84 46 S 104 58, 108 44" />
+    `;
+  }
+
+  if (part.kind === "finish_overlay") {
+    return `
+      <rect class="mini-finish" x="18" y="14" width="84" height="48" rx="7" />
+      <path class="mini-spark" d="M42 22 L46 32 L56 36 L46 40 L42 50 L38 40 L28 36 L38 32 Z" />
+    `;
+  }
+
+  const height = part.kind === "rail" ? 18 : 42;
+  const y = part.kind === "rail" ? 29 : 17;
+  return `
+    <rect class="mini-board" x="18" y="${y}" width="84" height="${height}" rx="5" />
+    <path class="mini-grain" d="M28 ${y + 12} C 44 ${y + 4}, 64 ${y + 20}, 92 ${y + 10}" />
+    <path class="mini-grain" d="M30 ${y + height - 10} C 54 ${y + height - 18}, 74 ${y + height - 2}, 96 ${y + height - 12}" />
+  `;
+}
+
+function renderInstructionSvg(instructionModel, frame, options = {}) {
+  const viewBox = instructionModel.view_box || { width: 520, height: 360 };
+  const parts = instructionModel.parts || [];
+  const visibleParts = new Set(frame.visible_parts || []);
+  const ghostParts = new Set(frame.ghost_parts || []);
+  const highlightParts = new Set(frame.highlight_parts || []);
+  const partSvg = parts
+    .filter((part) => visibleParts.has(part.id) || ghostParts.has(part.id))
+    .map((part) => {
+      const placement = { ...(part.geometry || {}), ...(frame.placements?.[part.id] || {}) };
+      return drawInstructionPart(part, placement, {
+        ghost: ghostParts.has(part.id),
+        highlight: highlightParts.has(part.id),
+        compact: options.compact
+      });
+    })
+    .join("");
+
+  return `
+    <svg class="instruction-svg${options.compact ? " compact" : ""}" viewBox="0 0 ${safeNumber(viewBox.width, 520)} ${safeNumber(viewBox.height, 360)}" role="img" aria-label="${escapeHtml(frame.title)}">
+      <defs>
+        <marker id="arrow-head" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="currentColor"></path>
+        </marker>
+      </defs>
+      <rect class="manual-paper-bg" x="0" y="0" width="${safeNumber(viewBox.width, 520)}" height="${safeNumber(viewBox.height, 360)}" rx="16"></rect>
+      <g class="manual-grid-lines">
+        ${drawManualGrid(safeNumber(viewBox.width, 520), safeNumber(viewBox.height, 360))}
+      </g>
+      <g class="manual-parts">${partSvg}</g>
+      ${drawInstructionArrows(frame.arrows || [])}
+      ${options.compact ? "" : drawInstructionCallouts(frame.callouts || [])}
+    </svg>
+  `;
+}
+
+function drawInstructionPart(part, placement, state) {
+  const classes = [
+    "manual-part",
+    `manual-part-${part.kind || "panel"}`,
+    state.ghost ? "ghost" : "",
+    state.highlight ? "highlight" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (part.kind === "fastener_set") {
+    return (placement.points || [])
+      .map(([x, y]) => `<circle class="${classes}" cx="${safeNumber(x)}" cy="${safeNumber(y)}" r="${state.compact ? 5 : 7}"></circle>`)
+      .join("");
+  }
+
+  if (part.kind === "adhesive_lines") {
+    return (placement.lines || [])
+      .map(([x1, y1, x2, y2]) => `<line class="${classes}" x1="${safeNumber(x1)}" y1="${safeNumber(y1)}" x2="${safeNumber(x2)}" y2="${safeNumber(y2)}"></line>`)
+      .join("");
+  }
+
+  if (part.kind === "finish_overlay") {
+    return `
+      <rect class="${classes}" x="${safeNumber(placement.x)}" y="${safeNumber(placement.y)}" width="${safeNumber(placement.width, 120)}" height="${safeNumber(placement.height, 80)}" rx="18"></rect>
+      <path class="manual-spark ${state.highlight ? "highlight" : ""}" d="M${safeNumber(placement.x) + 42} ${safeNumber(placement.y) + 28} l8 20 l20 8 l-20 8 l-8 20 l-8 -20 l-20 -8 l20 -8 z"></path>
+    `;
+  }
+
+  const x = safeNumber(placement.x);
+  const y = safeNumber(placement.y);
+  const width = safeNumber(placement.width, 120);
+  const height = safeNumber(placement.height, 36);
+  const label = width > 70 && height > 24 && !state.compact ? `<text class="manual-part-label" x="${x + width / 2}" y="${y + height / 2 + 4}">${escapeHtml(part.label)}</text>` : "";
+
+  return `
+    <g class="${classes}">
+      <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="7"></rect>
+      <path class="manual-grain" d="M${x + 12} ${y + height * 0.35} C ${x + width * 0.28} ${y + 4}, ${x + width * 0.62} ${y + height - 5}, ${x + width - 14} ${y + height * 0.34}"></path>
+      <path class="manual-grain" d="M${x + 16} ${y + height * 0.72} C ${x + width * 0.34} ${y + height * 0.48}, ${x + width * 0.64} ${y + height + 2}, ${x + width - 18} ${y + height * 0.64}"></path>
+      ${label}
+    </g>
+  `;
+}
+
+function drawInstructionArrows(arrows) {
+  if (!arrows.length) return "";
+  return `
+    <g class="manual-arrows">
+      ${arrows
+        .map(
+          (arrow) =>
+            `<line x1="${safeNumber(arrow.from?.[0])}" y1="${safeNumber(arrow.from?.[1])}" x2="${safeNumber(arrow.to?.[0])}" y2="${safeNumber(arrow.to?.[1])}" marker-end="url(#arrow-head)"></line>`
+        )
+        .join("")}
+    </g>
+  `;
+}
+
+function drawInstructionCallouts(callouts) {
+  if (!callouts.length) return "";
+  return `
+    <g class="manual-callouts">
+      ${callouts
+        .map((callout) => {
+          const x = safeNumber(callout.x, 20);
+          const y = safeNumber(callout.y, 20);
+          const text = escapeHtml(callout.text || "");
+          const width = Math.max(96, text.length * 8.4);
+          return `
+            <g>
+              <rect x="${x - width / 2}" y="${y - 18}" width="${width}" height="26" rx="13"></rect>
+              <text x="${x}" y="${y}">${text}</text>
+            </g>
+          `;
+        })
+        .join("")}
+    </g>
+  `;
+}
+
+function drawManualGrid(width, height) {
+  const lines = [];
+  for (let x = 40; x < width; x += 40) {
+    lines.push(`<line x1="${x}" y1="0" x2="${x}" y2="${height}"></line>`);
+  }
+  for (let y = 40; y < height; y += 40) {
+    lines.push(`<line x1="0" y1="${y}" x2="${width}" y2="${y}"></line>`);
+  }
+  return lines.join("");
+}
+
+function groupPartsByMaterial(parts) {
+  const map = new Map();
+  for (const part of parts) {
+    const key = normalizeKey(part.material_name);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(part);
+  }
+  return map;
+}
+
+function normalizeKey(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function humanizeRenderer(value) {
+  return String(value || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function safeNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Number(number.toFixed(2)) : fallback;
 }
 
 function renderVerifier(plan) {
@@ -484,8 +788,10 @@ function animateResultView() {
     ".plan-header",
     ".metric",
     ".mini-score",
+    ".part-inventory-card",
+    ".manual-page",
     ".material-card",
-    ".steps-list li",
+    ".manual-step-card",
     ".trace-item"
   ];
   motion.fromTo(

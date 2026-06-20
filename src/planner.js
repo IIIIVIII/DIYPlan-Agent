@@ -179,6 +179,7 @@ function verifyPlan(plan, preferences) {
     ...next.routing_notes,
     "Future version: route material normalization and verifier passes to a smaller local model."
   ];
+  next.instruction_model = buildInstructionModel(next, preferences);
 
   return next;
 }
@@ -190,6 +191,179 @@ function stage(name, model, note, latencyMs) {
     note,
     latency_ms: latencyMs
   };
+}
+
+function buildInstructionModel(plan, preferences) {
+  const category = String(plan.detected_object?.category || preferences.furnitureType || "side table").toLowerCase();
+  if (category.includes("book") || category.includes("shelf")) return bookshelfInstructionModel(plan);
+  return sideTableInstructionModel(plan);
+}
+
+function sideTableInstructionModel(plan) {
+  const boardMaterial = findMaterialName(plan, "1x12") || findMaterialName(plan, "board") || "select pine board 1x12";
+  const railMaterial = findMaterialName(plan, "1x3") || boardMaterial;
+  const screwMaterial = findMaterialName(plan, "screw") || "wood screws 1-1/4 inch";
+  const glueMaterial = findMaterialName(plan, "glue") || "interior wood glue";
+  const finishMaterial = findMaterialName(plan, "polyurethane") || findMaterialName(plan, "finish") || "water based polyurethane satin";
+
+  const parts = [
+    part("top_panel", "Top panel", "panel", boardMaterial, "24 x 18 in", 1, { x: 130, y: 42, width: 260, height: 44 }),
+    part("left_side", "Left side panel", "panel", boardMaterial, "18 x 22 in", 1, { x: 116, y: 118, width: 48, height: 170 }),
+    part("right_side", "Right side panel", "panel", boardMaterial, "18 x 22 in", 1, { x: 356, y: 118, width: 48, height: 170 }),
+    part("lower_shelf", "Lower shelf", "panel", boardMaterial, "20 x 14 in", 1, { x: 168, y: 238, width: 184, height: 34 }),
+    part("front_rail", "Front rail", "rail", railMaterial, "20 x 2.5 in", 1, { x: 168, y: 172, width: 184, height: 18 }),
+    part("back_rail", "Back rail", "rail", railMaterial, "20 x 2.5 in", 1, { x: 168, y: 202, width: 184, height: 18 }),
+    part("screw_set", "Screw points", "fastener_set", screwMaterial, "pre-drill first", 12, {}),
+    part("glue_lines", "Glue lines", "adhesive_lines", glueMaterial, "thin bead", 1, {}),
+    part("finish_coat", "Satin finish", "finish_overlay", finishMaterial, "2-3 coats", 1, {})
+  ];
+
+  const assembled = {
+    top_panel: { x: 130, y: 54, width: 260, height: 44 },
+    left_side: { x: 136, y: 96, width: 48, height: 176 },
+    right_side: { x: 336, y: 96, width: 48, height: 176 },
+    lower_shelf: { x: 168, y: 226, width: 184, height: 34 },
+    front_rail: { x: 168, y: 156, width: 184, height: 18 },
+    back_rail: { x: 168, y: 188, width: 184, height: 18 },
+    screw_set: {
+      points: [
+        [154, 104],
+        [174, 104],
+        [346, 104],
+        [366, 104],
+        [154, 158],
+        [174, 158],
+        [346, 158],
+        [366, 158],
+        [172, 235],
+        [348, 235],
+        [172, 253],
+        [348, 253]
+      ]
+    },
+    glue_lines: {
+      lines: [
+        [136, 96, 184, 96],
+        [336, 96, 384, 96],
+        [168, 226, 352, 226],
+        [168, 156, 352, 156]
+      ]
+    },
+    finish_coat: { x: 118, y: 42, width: 284, height: 242 }
+  };
+
+  return {
+    version: "0.1",
+    renderer: "2d_vector_manual",
+    source: "local_vector_interpreter",
+    source_note:
+      "MVP vectorizes the detected furniture into editable 2D parts from the generated plan; future cloud mode can replace this with true image-to-part segmentation.",
+    view_box: { width: 520, height: 360 },
+    parts,
+    frames: [
+      {
+        title: "Separate the visible parts",
+        caption: "Flatten the inspiration image into cut-ready 2D pieces before any assembly.",
+        visible_parts: ["top_panel", "left_side", "right_side", "lower_shelf", "front_rail", "back_rail"],
+        highlight_parts: ["top_panel", "left_side", "right_side", "lower_shelf", "front_rail", "back_rail"],
+        placements: {
+          top_panel: { x: 128, y: 34, width: 264, height: 44 },
+          left_side: { x: 66, y: 128, width: 48, height: 166 },
+          right_side: { x: 406, y: 128, width: 48, height: 166 },
+          lower_shelf: { x: 154, y: 252, width: 212, height: 34 },
+          front_rail: { x: 154, y: 146, width: 212, height: 18 },
+          back_rail: { x: 154, y: 184, width: 212, height: 18 }
+        },
+        callouts: [
+          { part_id: "top_panel", text: "top", x: 252, y: 26 },
+          { part_id: "left_side", text: "side x2", x: 62, y: 118 },
+          { part_id: "front_rail", text: "rails", x: 366, y: 146 }
+        ]
+      },
+      {
+        title: "Attach side panels to the top",
+        caption: "Dry-fit the two side panels under the tabletop, then check for square corners.",
+        visible_parts: ["top_panel", "left_side", "right_side"],
+        ghost_parts: ["lower_shelf", "front_rail", "back_rail"],
+        highlight_parts: ["left_side", "right_side"],
+        placements: assembled,
+        arrows: [
+          { from: [160, 294], to: [160, 276] },
+          { from: [360, 294], to: [360, 276] }
+        ],
+        callouts: [{ part_id: "top_panel", text: "keep top flush", x: 256, y: 44 }]
+      },
+      {
+        title: "Slide in shelf and rails",
+        caption: "Use the lower shelf and rails to lock the side panels into a rigid rectangular frame.",
+        visible_parts: ["top_panel", "left_side", "right_side", "lower_shelf", "front_rail", "back_rail"],
+        highlight_parts: ["lower_shelf", "front_rail", "back_rail"],
+        placements: assembled,
+        arrows: [
+          { from: [82, 244], to: [164, 244] },
+          { from: [438, 244], to: [356, 244] },
+          { from: [260, 134], to: [260, 156] }
+        ],
+        callouts: [{ part_id: "lower_shelf", text: "shelf sits inside", x: 260, y: 285 }]
+      },
+      {
+        title: "Glue and screw the joints",
+        caption: "Apply glue at contact lines, pre-drill, then drive screws only after the frame is square.",
+        visible_parts: ["top_panel", "left_side", "right_side", "lower_shelf", "front_rail", "back_rail", "glue_lines", "screw_set"],
+        highlight_parts: ["glue_lines", "screw_set"],
+        placements: assembled,
+        callouts: [
+          { part_id: "screw_set", text: "pre-drill", x: 408, y: 110 },
+          { part_id: "glue_lines", text: "thin glue bead", x: 110, y: 154 }
+        ]
+      },
+      {
+        title: "Sand edges and apply finish",
+        caption: "Round sharp edges, sand evenly, and apply thin satin coats after test-fitting.",
+        visible_parts: ["top_panel", "left_side", "right_side", "lower_shelf", "front_rail", "back_rail", "finish_coat"],
+        highlight_parts: ["finish_coat"],
+        placements: assembled,
+        callouts: [{ part_id: "finish_coat", text: "finish after dry fit", x: 384, y: 48 }]
+      }
+    ]
+  };
+}
+
+function bookshelfInstructionModel(plan) {
+  const model = sideTableInstructionModel(plan);
+  model.source_note =
+    "MVP bookshelf mode uses the same 2D manual renderer with shelf-oriented labels; future vision routing can infer exact shelf count from the image.";
+  model.parts = model.parts.map((item) => {
+    const labels = {
+      top_panel: "Top shelf",
+      lower_shelf: "Bottom shelf",
+      left_side: "Left upright",
+      right_side: "Right upright",
+      front_rail: "Middle shelf",
+      back_rail: "Back stretcher"
+    };
+    return labels[item.id] ? { ...item, label: labels[item.id] } : item;
+  });
+  return model;
+}
+
+function part(id, label, kind, materialName, cutSize, quantity, geometry) {
+  return {
+    id,
+    label,
+    kind,
+    material_name: materialName,
+    cut_size: cutSize,
+    quantity,
+    geometry
+  };
+}
+
+function findMaterialName(plan, needle) {
+  const material = (plan.materials || []).find((item) =>
+    String(item.name || "").toLowerCase().includes(String(needle).toLowerCase())
+  );
+  return material?.name || "";
 }
 
 function fallbackPlan(preferences) {
