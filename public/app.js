@@ -7,6 +7,7 @@ const sampleButton = document.querySelector("#sample-button");
 const form = document.querySelector("#plan-form");
 const generateButton = document.querySelector("#generate-button");
 const statusPill = document.querySelector("#status-pill");
+const liquidCanvas = document.querySelector("#liquid-canvas");
 
 const emptyState = document.querySelector("#empty-state");
 const loadingState = document.querySelector("#loading-state");
@@ -14,7 +15,10 @@ const errorState = document.querySelector("#error-state");
 const planOutput = document.querySelector("#plan-output");
 
 let imageDataUrl = "";
+let pointerX = 0.5;
+let pointerY = 0.5;
 
+startLiquidCanvas();
 checkHealth();
 
 imageInput.addEventListener("change", async (event) => {
@@ -123,7 +127,7 @@ async function generatePlan() {
 
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Plan generation failed.");
-  renderPlan(result);
+    renderPlan(result);
   } catch (error) {
     showError(error.message);
   } finally {
@@ -333,4 +337,153 @@ function sampleImageDataUrl() {
     </svg>
   `;
   return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
+function startLiquidCanvas() {
+  if (!liquidCanvas) return;
+
+  const ctx = liquidCanvas.getContext("2d", { alpha: false });
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let width = 0;
+  let height = 0;
+  let dpr = 1;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = window.innerWidth;
+    height = window.innerHeight;
+    liquidCanvas.width = Math.floor(width * dpr);
+    liquidCanvas.height = Math.floor(height * dpr);
+    liquidCanvas.style.width = `${width}px`;
+    liquidCanvas.style.height = `${height}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function draw(time) {
+    const t = reducedMotion ? 0.35 : time * 0.00018;
+    const px = (pointerX - 0.5) * 90;
+    const py = (pointerY - 0.5) * 70;
+
+    ctx.globalCompositeOperation = "source-over";
+    const base = ctx.createLinearGradient(0, 0, width, height);
+    base.addColorStop(0, "#040604");
+    base.addColorStop(0.42, "#15160e");
+    base.addColorStop(1, "#030403");
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    ctx.filter = "blur(26px)";
+
+    drawRibbon(ctx, {
+      time: t,
+      offset: 0,
+      width,
+      height,
+      pointerX: px,
+      pointerY: py,
+      colorStops: [
+        [0, "rgba(213, 255, 87, 0)"],
+        [0.28, "rgba(213, 255, 87, 0.2)"],
+        [0.58, "rgba(234, 211, 160, 0.34)"],
+        [1, "rgba(139, 178, 255, 0.08)"]
+      ],
+      lineWidth: Math.max(width, height) * 0.22
+    });
+
+    drawRibbon(ctx, {
+      time: t * 1.25 + 1.8,
+      offset: 1.3,
+      width,
+      height,
+      pointerX: -px * 0.55,
+      pointerY: py * 0.85,
+      colorStops: [
+        [0, "rgba(217, 134, 82, 0)"],
+        [0.25, "rgba(217, 134, 82, 0.22)"],
+        [0.62, "rgba(194, 201, 164, 0.3)"],
+        [1, "rgba(213, 255, 87, 0.1)"]
+      ],
+      lineWidth: Math.max(width, height) * 0.18
+    });
+
+    drawRibbon(ctx, {
+      time: t * 0.88 + 3.4,
+      offset: 2.2,
+      width,
+      height,
+      pointerX: px * 0.35,
+      pointerY: -py * 0.4,
+      colorStops: [
+        [0, "rgba(139, 178, 255, 0)"],
+        [0.34, "rgba(139, 178, 255, 0.22)"],
+        [0.7, "rgba(234, 211, 160, 0.2)"],
+        [1, "rgba(127, 141, 105, 0.18)"]
+      ],
+      lineWidth: Math.max(width, height) * 0.14
+    });
+
+    ctx.restore();
+
+    const vignette = ctx.createRadialGradient(width * 0.52, height * 0.44, 0, width * 0.52, height * 0.44, Math.max(width, height) * 0.72);
+    vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
+    vignette.addColorStop(1, "rgba(0, 0, 0, 0.52)");
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "rgba(2, 3, 2, 0.36)";
+    ctx.fillRect(0, 0, width, height);
+
+    if (!reducedMotion) requestAnimationFrame(draw);
+  }
+
+  resize();
+  draw(0);
+
+  window.addEventListener("resize", () => {
+    resize();
+    draw(0);
+  });
+
+  window.addEventListener("pointermove", (event) => {
+    pointerX = event.clientX / Math.max(window.innerWidth, 1);
+    pointerY = event.clientY / Math.max(window.innerHeight, 1);
+  });
+
+  if (!reducedMotion) requestAnimationFrame(draw);
+}
+
+function drawRibbon(ctx, config) {
+  const { time, offset, width, height, pointerX, pointerY, colorStops, lineWidth } = config;
+  const gradient = ctx.createLinearGradient(0, height * 0.2, width, height * 0.86);
+  for (const [stop, color] of colorStops) gradient.addColorStop(stop, color);
+
+  const yBase = height * (0.2 + 0.14 * Math.sin(time + offset));
+  const amplitude = height * (0.23 + 0.06 * Math.cos(time * 0.7 + offset));
+  const xShift = Math.sin(time * 0.85 + offset) * width * 0.14 + pointerX;
+  const yShift = Math.cos(time * 0.72 + offset) * height * 0.07 + pointerY;
+
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.22, yBase + yShift);
+  ctx.bezierCurveTo(
+    width * 0.16 + xShift,
+    yBase - amplitude + yShift,
+    width * 0.42 - xShift,
+    yBase + amplitude * 1.25,
+    width * 0.72 + xShift * 0.35,
+    yBase + amplitude * 0.18 - yShift
+  );
+  ctx.bezierCurveTo(
+    width * 0.98 - xShift * 0.6,
+    yBase - amplitude * 0.72,
+    width * 1.08 + xShift,
+    yBase + amplitude * 0.74,
+    width * 1.24,
+    yBase + amplitude * 0.4
+  );
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = "round";
+  ctx.stroke();
 }

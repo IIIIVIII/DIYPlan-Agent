@@ -7,12 +7,27 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <canvas id="liquid-canvas" class="liquid-canvas" aria-hidden="true"></canvas>
+    <div class="grain-layer" aria-hidden="true"></div>
     <main class="app-shell">
+      <header class="topbar" aria-label="Project header">
+        <div class="wordmark">
+          <span class="mark-dot"></span>
+          <span>DIYPlan</span>
+          <small>agent lab</small>
+        </div>
+        <nav class="topnav" aria-label="Workflow">
+          <a href="#plan-form">Plan</a>
+          <a href="#routing-list">Route</a>
+          <a href="#research-score-grid">Evaluate</a>
+        </nav>
+      </header>
+
       <section class="workspace">
         <aside class="input-panel" aria-label="Planning controls">
           <div class="brand-row">
             <div>
-              <p class="eyebrow">Multimodal planning demo</p>
+              <p class="eyebrow">Multimodal routing studio</p>
               <h1>DIYPlan Agent</h1>
             </div>
             <span id="status-pill" class="status-pill">Checking</span>
@@ -92,8 +107,13 @@
         <section class="results-panel" aria-live="polite">
           <div class="empty-state" id="empty-state">
             <p class="eyebrow">Ready</p>
-            <h2>Upload an inspiration image to generate a buildable plan.</h2>
-            <p>Cloud mode uses the OpenAI Responses API when <code>OPENAI_API_KEY</code> is configured.</p>
+            <h2>Image in. Build plan out.</h2>
+            <div class="empty-grid" aria-hidden="true">
+              <span>vision</span>
+              <span>routing</span>
+              <span>verifier</span>
+              <span>materials</span>
+            </div>
           </div>
 
           <div id="loading-state" class="loading-state" hidden>
