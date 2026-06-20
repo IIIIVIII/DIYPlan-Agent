@@ -37,16 +37,44 @@ Each frame has:
 - optional `insets`
 - optional scene helpers such as `surface` or `helper`
 
+## How We Should Write The Model
+
+The first model to build is not a neural network that draws the final manual. The first model is a strict instruction-generation contract.
+
+For this project, "model" means four layers:
+
+1. **Reference parser**: reads the uploaded product image, optional dimension diagram, and optional source booklet pages. It extracts object type, known dimensions, parts, hardware, and the original step order.
+2. **Instruction planner**: converts the reference into a structured JSON manual. It must output part IDs, quantities, geometry kinds, placements, arrows, inset details, hardware counts, and per-step state transitions.
+3. **Deterministic renderer**: turns the JSON into a consistent LEGO-style visual manual. The renderer owns the visual style, so every page has the same drawing language.
+4. **Verifier**: checks whether the model used the original step sequence, kept the same part geometry across pages, introduced parts before using them, preserved hardware counts, and avoided hallucinated extra steps.
+
+This means the LLM or vision model should never be asked to directly generate SVG pages. It should be asked to fill the contract. The renderer and verifier should be local, cheap, repeatable, and testable.
+
 ## Round Table Rules
 
 The round table path is intentionally stricter than the generic side-table fallback:
 
 - The tabletop halves are rendered as true circular/elliptical halves, not rectangular panels.
 - The tabletop seam stays aligned across pages.
-- The manual follows a state progression inspired by real furniture instructions: join tabletop, lock seam, place underside frame, fasten frame, insert leg pairs, add lower rails, add X brace, tighten brackets, add levelers, flip with two people, final check.
+- The manual follows the provided assembly-book sequence one-to-one at the process level: join tabletop halves, screw the underside frame, set the first leg rail, insert the four legs, tighten the lower X brace, add leveling feet and flip with two people.
 - Each page introduces only a small number of new parts.
 - Repeated hardware operations use explicit counts such as `2x`, `4x`, or `8x`.
 - Local detail insets explain small connection points instead of crowding the main drawing.
+
+For the current round-table fixture, the source booklet is treated as the ground truth. The demo should not invent cutting, sanding, finishing, or extra construction pages when the source manual does not contain those pages. Future work can add a second mode for "build a simplified DIY substitute," but the source-manual mode must stay faithful to the provided booklet.
+
+## Training Direction
+
+Once the contract is stable, we can turn this into a real modeling problem:
+
+- Collect pairs of product image plus source booklet pages mapped to instruction JSON.
+- Use a frontier multimodal model to bootstrap labels for parts, hardware, and step order.
+- Hand-correct a small set of examples to create a high-quality evaluation set.
+- Train or prompt smaller models to produce the same JSON contract.
+- Route only the hard stages, such as image understanding or ambiguous part detection, to a stronger model.
+- Keep rendering and verification local so cost does not scale with the number of manual pages.
+
+The research question is not only "can the model make a pretty manual?" It is "which stages require expensive multimodal inference, and can structured output plus verification keep the final manual understandable, consistent, and cheap?"
 
 ## Research Direction
 

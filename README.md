@@ -6,6 +6,8 @@ The user-facing idea is simple: upload a photo of a table, shelf, coffee table, 
 
 The technical framing is the more important part: this project treats DIY furniture planning as a realistic multimodal agent workload for studying model routing, structured generation, verification, latency, and cost.
 
+The instruction-manual part is intentionally designed as a model contract, not as free-form image generation. The agent should parse the uploaded reference, produce structured parts and assembly states, and let a deterministic renderer draw the final LEGO-style pages. That keeps the visual language consistent and makes the output verifiable.
+
 ## Why This Project Exists
 
 Many furniture products are expensive, while many people in the US are comfortable with basic home improvement work. The hard part is not finding inspiration. The hard part is turning a visual reference into a buildable plan:
@@ -44,7 +46,7 @@ The demo can run in two modes:
 - Structured DIY plan generation
 - Agent workflow console that shows observation, measurement, decomposition, routing, retrieval, manual generation, and verification stages
 - LEGO-inspired 2D instruction manual with per-step part bins, part decomposition, arrows, callouts, numbered pages, and step thumbnails
-- Round table manual path with 21 decomposed parts and 14 strict assembly pages
+- Round table manual path with 19 decomposed parts and 6 original-flow assembly pages
 - Material list with quantities, rough costs, alternatives, and store search queries
 - Material cards that show which 2D parts each material produces
 - Tool list and visual step-by-step build instructions
@@ -56,6 +58,26 @@ The demo can run in two modes:
 - Built-in routing strategies: cost optimized, quality first, cascade, and local first
 - Offline benchmark harness for comparing quality, latency, cost units, and escalation triggers
 - Raw JSON output for future evaluation and benchmark work
+
+## Instruction Model Direction
+
+The current round-table path treats the provided assembly booklet as the ground truth. Instead of inventing a new DIY sequence, it mirrors the original process at the step level:
+
+1. Join the two round tabletop halves.
+2. Screw the underside frame to the tabletop.
+3. Set the first leg rail.
+4. Insert the four legs.
+5. Tighten the lower X brace.
+6. Add leveling feet and flip the table with two people.
+
+The long-term model should generate this kind of structured manual data:
+
+- part IDs, labels, quantities, material names, cut sizes, and geometry kinds
+- per-step parts-needed bins, visible parts, highlighted new parts, placements, arrows, and detail insets
+- hardware counts such as `1x`, `2x`, `4x`, and `8x`
+- verifier-readable constraints for source-step order, geometry consistency, and missing parts
+
+The LLM or multimodal model should fill this schema. The browser renderer should draw the manual. That separation is the bridge from app demo to ML infra research: we can route expensive model calls only to image understanding or ambiguous planning, then use cheap local rendering and verification for the rest.
 
 ## Quick Start
 
