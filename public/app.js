@@ -2,6 +2,8 @@ const imageInput = document.querySelector("#image-input");
 const dropZone = document.querySelector("#drop-zone");
 const previewWrap = document.querySelector("#preview-wrap");
 const previewImage = document.querySelector("#preview-image");
+const referenceWrap = document.querySelector("#reference-wrap");
+const referenceImage = document.querySelector("#reference-image");
 const clearImageButton = document.querySelector("#clear-image");
 const sampleButton = document.querySelector("#sample-button");
 const form = document.querySelector("#plan-form");
@@ -108,11 +110,12 @@ clearImageButton.addEventListener("click", () => {
   imageDataUrl = "";
   imageInput.value = "";
   previewWrap.hidden = true;
+  referenceWrap.hidden = true;
   renderAgentConsole("idle");
 });
 
 sampleButton.addEventListener("click", async () => {
-  await setImageFromUrl("/examples/round-table-photo.png", "Round table sample");
+  await setImageFromUrl("/examples/round-table-photo.png", "Round table sample", "/examples/round-table-dimensions.png");
   document.querySelector("#furniture-type").value = "round dining table";
   document.querySelector("#target-size").value = "57 in diameter x 29.5 H in";
   document.querySelector("#budget").value = "$180 - $360";
@@ -158,10 +161,10 @@ async function setImageFromFile(file, sourceLabel = "Uploaded image") {
   assignImageDataUrl(await readFileAsDataUrl(file), sourceLabel);
 }
 
-async function setImageFromUrl(url, sourceLabel = "Dragged image URL") {
+async function setImageFromUrl(url, sourceLabel = "Dragged image URL", referenceUrl = "") {
   if (!url) return;
   if (url.startsWith("data:image/")) {
-    assignImageDataUrl(url, sourceLabel);
+    assignImageDataUrl(url, sourceLabel, referenceUrl);
     return;
   }
 
@@ -171,7 +174,7 @@ async function setImageFromUrl(url, sourceLabel = "Dragged image URL") {
     if (!response.ok) throw new Error("Could not load local sample image.");
     const blob = await response.blob();
     if (!blob.type.startsWith("image/")) throw new Error("The dragged URL is not an image.");
-    assignImageDataUrl(await readFileAsDataUrl(blob), sourceLabel);
+    assignImageDataUrl(await readFileAsDataUrl(blob), sourceLabel, referenceUrl);
     return;
   }
 
@@ -182,13 +185,20 @@ async function setImageFromUrl(url, sourceLabel = "Dragged image URL") {
   });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "Could not import dragged image.");
-  assignImageDataUrl(payload.imageDataUrl, sourceLabel);
+  assignImageDataUrl(payload.imageDataUrl, sourceLabel, referenceUrl);
 }
 
-function assignImageDataUrl(dataUrl, sourceLabel) {
+function assignImageDataUrl(dataUrl, sourceLabel, referenceUrl = "") {
   imageDataUrl = dataUrl;
   previewImage.src = dataUrl;
   previewWrap.hidden = false;
+  if (referenceUrl) {
+    referenceImage.src = referenceUrl;
+    referenceWrap.hidden = false;
+  } else {
+    referenceWrap.hidden = true;
+    referenceImage.removeAttribute("src");
+  }
   renderAgentConsole("image", { message: `${sourceLabel} loaded. Agent is ready to inspect the furniture.` });
 }
 

@@ -369,6 +369,37 @@ h3 {
   border-radius: 6px;
 }
 
+.reference-wrap {
+  display: grid;
+  gap: 8px;
+  margin: -2px 0 12px;
+  border: 1px solid rgba(246, 240, 223, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 9px;
+}
+
+.reference-wrap[hidden] {
+  display: none;
+}
+
+.reference-wrap span {
+  color: rgba(246, 240, 223, 0.62);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.reference-wrap img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #f7f5ee;
+}
+
 .text-button {
   margin-top: 9px;
   padding: 0;
