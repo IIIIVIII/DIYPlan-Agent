@@ -1,0 +1,14 @@
+{
+  "name": "diyplan-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "check": "node --check server.js && node --check src/openai.js && node --check src/planner.js && node --check src/schema.js && node --check src/materialCatalog.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

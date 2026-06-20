@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DIYPlan Agent</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace">
+        <aside class="input-panel" aria-label="Planning controls">
+          <div class="brand-row">
+            <div>
+              <p class="eyebrow">Multimodal planning demo</p>
+              <h1>DIYPlan Agent</h1>
+            </div>
+            <span id="status-pill" class="status-pill">Checking</span>
+          </div>
+
+          <label class="drop-zone" id="drop-zone">
+            <input id="image-input" type="file" accept="image/*" />
+            <span class="drop-title">Upload furniture image</span>
+            <span class="drop-meta">JPG, PNG, or WebP</span>
+          </label>
+
+          <div class="preview-wrap" id="preview-wrap" hidden>
+            <img id="preview-image" alt="Uploaded furniture preview" />
+            <button class="text-button" id="clear-image" type="button">Clear image</button>
+          </div>
+
+          <button class="secondary-action" id="sample-button" type="button">Use sample side table</button>
+
+          <form id="plan-form" class="control-grid">
+            <label>
+              <span>Furniture type</span>
+              <select id="furniture-type">
+                <option value="auto">Auto detect</option>
+                <option value="side table">Side table</option>
+                <option value="coffee table">Coffee table</option>
+                <option value="bookshelf">Bookshelf</option>
+                <option value="nightstand">Nightstand</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Skill level</span>
+              <select id="skill-level">
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Target size</span>
+              <input id="target-size" type="text" placeholder="24 W x 18 D x 24 H in" />
+            </label>
+
+            <label>
+              <span>Budget</span>
+              <input id="budget" type="text" placeholder="$80 - $150" />
+            </label>
+
+            <label>
+              <span>Zip code</span>
+              <input id="zipcode" type="text" inputmode="numeric" placeholder="90024" />
+            </label>
+
+            <fieldset class="tools-field">
+              <legend>Available tools</legend>
+              <label><input type="checkbox" name="tools" value="drill" checked /> Drill</label>
+              <label><input type="checkbox" name="tools" value="saw" checked /> Saw</label>
+              <label><input type="checkbox" name="tools" value="sander" /> Sander</label>
+              <label><input type="checkbox" name="tools" value="clamps" /> Clamps</label>
+            </fieldset>
+
+            <button class="primary-action" id="generate-button" type="submit">Generate DIY plan</button>
+          </form>
+        </aside>
+
+        <section class="results-panel" aria-live="polite">
+          <div class="empty-state" id="empty-state">
+            <p class="eyebrow">Ready</p>
+            <h2>Upload an inspiration image to generate a buildable plan.</h2>
+            <p>Cloud mode uses the OpenAI Responses API when <code>OPENAI_API_KEY</code> is configured.</p>
+          </div>
+
+          <div id="loading-state" class="loading-state" hidden>
+            <div class="progress-bar"><span></span></div>
+            <p>Running multimodal planning workflow...</p>
+          </div>
+
+          <div id="error-state" class="error-state" hidden></div>
+
+          <article id="plan-output" class="plan-output" hidden>
+            <header class="plan-header">
+              <div>
+                <p class="eyebrow" id="mode-label">Cloud mode</p>
+                <h2 id="plan-title"></h2>
+                <p id="plan-summary"></p>
+              </div>
+              <div class="score-box">
+                <span id="buildability-score">0</span>
+                <small>Buildability</small>
+              </div>
+            </header>
+
+            <section class="metrics-grid" id="metrics-grid"></section>
+
+            <section class="content-band">
+              <h3>Materials</h3>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Qty</th>
+                      <th>Cost</th>
+                      <th>Search</th>
+                    </tr>
+                  </thead>
+                  <tbody id="materials-body"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="content-band">
+              <h3>Build Steps</h3>
+              <ol class="steps-list" id="steps-list"></ol>
+            </section>
+
+            <section class="two-column-band">
+              <div>
+                <h3>Verifier</h3>
+                <ul class="compact-list" id="verifier-list"></ul>
+              </div>
+              <div>
+                <h3>Routing Policy</h3>
+                <ul class="compact-list" id="routing-list"></ul>
+              </div>
+            </section>
+
+            <section class="content-band">
+              <h3>Execution Trace</h3>
+              <div class="trace-list" id="trace-list"></div>
+            </section>
+
+            <section class="content-band">
+              <h3>Structured Output</h3>
+              <pre id="json-output"></pre>
+            </section>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
