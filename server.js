@@ -43,6 +43,12 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, plan);
     }
 
+    if (req.method === "POST" && req.url === "/api/import-image") {
+      const payload = await readJsonBody(req);
+      const imageDataUrl = await importRemoteImage(payload.url || payload.imageUrl);
+      return sendJson(res, 200, { imageDataUrl });
+    }
+
     if (req.method === "GET") {
       return serveStatic(req, res);
     }
@@ -136,4 +142,49 @@ function normalizePublicPath(urlPath) {
 function sendJson(res, status, value) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(value));
+}
+
+async function importRemoteImage(rawUrl) {
+  let url;
+  try {
+    url = new URL(String(rawUrl || ""));
+  } catch {
+    const error = new Error("Dragged image URL is not valid.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["http:", "https:"].includes(url.protocol)) {
+    const error = new Error("Only http and https image URLs can be imported.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      "user-agent": "DIYPlan-Agent/0.1 image importer"
+    }
+  });
+
+  if (!response.ok) {
+    const error = new Error(`Could not import image URL (${response.status}).`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.startsWith("image/")) {
+    const error = new Error("Dragged URL did not resolve to an image.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.byteLength > 8 * 1024 * 1024) {
+    const error = new Error("Remote image is too large for this demo. Try an image under 8 MB.");
+    error.statusCode = 413;
+    throw error;
+  }
+
+  return `data:${contentType.split(";")[0]};base64,${buffer.toString("base64")}`;
 }

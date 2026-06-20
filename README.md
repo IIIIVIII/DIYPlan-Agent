@@ -26,6 +26,7 @@ The current MVP supports a narrow low-risk furniture scope:
 
 - side tables
 - coffee tables
+- round dining tables
 - bookshelves
 - nightstands
 
@@ -38,10 +39,12 @@ The demo can run in two modes:
 
 ## Features
 
-- Image upload with preview
-- Sample furniture image for quick testing
+- Image upload with preview, including local files, dragged browser images, image URLs, and pasted screenshots
+- Round dining table sample fixture for quick testing with the included reference image
 - Structured DIY plan generation
-- 14-page LEGO-inspired 2D instruction manual with per-step part bins, part decomposition, arrows, callouts, and step thumbnails
+- Agent workflow console that shows observation, measurement, decomposition, routing, retrieval, manual generation, and verification stages
+- LEGO-inspired 2D instruction manual with per-step part bins, part decomposition, arrows, callouts, numbered pages, and step thumbnails
+- Round table manual path with 18 decomposed parts and 17 micro-assembly pages
 - Material list with quantities, rough costs, alternatives, and store search queries
 - Material cards that show which 2D parts each material produces
 - Tool list and visual step-by-step build instructions
@@ -128,11 +131,12 @@ reports/benchmark-summary.md
 ## Product Flow
 
 1. User uploads a furniture inspiration image.
-2. User optionally provides category, target size, budget, skill level, zip code, and available tools.
-3. The system generates a simplified inspired-by plan instead of copying the original design.
-4. The local verifier flags missing inputs, unsafe work, and cost inconsistencies.
-5. The material linker produces store search links.
-6. The UI displays the plan, trace, routing policy, and structured output.
+2. The UI starts an agent run and shows each workflow stage as it progresses.
+3. User optionally provides category, target size, budget, skill level, zip code, and available tools.
+4. The system generates a simplified inspired-by plan instead of copying the original design.
+5. The local verifier flags missing inputs, unsafe work, and cost inconsistencies.
+6. The material linker produces store search links.
+7. The UI displays the plan, instruction manual, trace, routing policy, and structured output.
 
 ## System Architecture
 
@@ -222,6 +226,18 @@ Example request:
   "skillLevel": "beginner",
   "zipcode": "90024",
   "tools": ["drill", "saw"]
+}
+```
+
+### `POST /api/import-image`
+
+Imports a dragged or pasted remote image URL and converts it into a data URL that can be passed into the local planning workflow.
+
+Example request:
+
+```json
+{
+  "imageUrl": "https://example.com/table.png"
 }
 ```
 

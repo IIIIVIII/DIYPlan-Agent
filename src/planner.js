@@ -195,6 +195,7 @@ function stage(name, model, note, latencyMs) {
 
 function buildInstructionModel(plan, preferences) {
   const category = String(plan.detected_object?.category || preferences.furnitureType || "side table").toLowerCase();
+  if (category.includes("round") || category.includes("dining")) return roundTableInstructionModel(plan);
   if (category.includes("book") || category.includes("shelf")) return bookshelfInstructionModel(plan);
   return sideTableInstructionModel(plan);
 }
@@ -492,6 +493,213 @@ function bookshelfInstructionModel(plan) {
   return model;
 }
 
+function roundTableInstructionModel(plan) {
+  const topMaterial = findMaterialName(plan, "round tabletop") || findMaterialName(plan, "plywood") || findMaterialName(plan, "panel") || "round tabletop panel";
+  const legMaterial = findMaterialName(plan, "2x4") || findMaterialName(plan, "leg") || "2x4 hardwood boards";
+  const railMaterial = findMaterialName(plan, "1x4") || findMaterialName(plan, "rail") || "1x4 hardwood boards";
+  const screwMaterial = findMaterialName(plan, "screw") || "wood screws 1-1/4 inch";
+  const glueMaterial = findMaterialName(plan, "glue") || "interior wood glue";
+  const finishMaterial = findMaterialName(plan, "polyurethane") || findMaterialName(plan, "finish") || "water based polyurethane satin";
+
+  const parts = [
+    part("top_left_half", "Left tabletop half", "round_half_left", topMaterial, "57 in dia half", 1, { x: 108, y: 54, width: 152, height: 58 }),
+    part("top_right_half", "Right tabletop half", "round_half_right", topMaterial, "57 in dia half", 1, { x: 260, y: 54, width: 152, height: 58 }),
+    part("seam_batten_a", "Seam batten A", "rail", railMaterial, "28 x 3 in", 1, { x: 196, y: 116, width: 128, height: 14 }),
+    part("seam_batten_b", "Seam batten B", "rail", railMaterial, "28 x 3 in", 1, { x: 196, y: 136, width: 128, height: 14 }),
+    part("apron_front", "Front apron rail", "rail", railMaterial, "38 x 3 in", 1, { x: 154, y: 134, width: 212, height: 16 }),
+    part("apron_back", "Back apron rail", "rail", railMaterial, "38 x 3 in", 1, { x: 154, y: 156, width: 212, height: 16 }),
+    part("leg_left_front", "Left front leg", "angled_leg", legMaterial, "28 in angled", 1, { x: 142, y: 132, width: 38, height: 150, tilt: -10 }),
+    part("leg_left_back", "Left back leg", "angled_leg", legMaterial, "28 in angled", 1, { x: 188, y: 132, width: 34, height: 150, tilt: 7 }),
+    part("leg_right_back", "Right back leg", "angled_leg", legMaterial, "28 in angled", 1, { x: 298, y: 132, width: 34, height: 150, tilt: -7 }),
+    part("leg_right_front", "Right front leg", "angled_leg", legMaterial, "28 in angled", 1, { x: 340, y: 132, width: 38, height: 150, tilt: 10 }),
+    part("foot_left", "Left foot rail", "foot_rail", railMaterial, "30 x 3 in", 1, { x: 124, y: 274, width: 124, height: 16 }),
+    part("foot_right", "Right foot rail", "foot_rail", railMaterial, "30 x 3 in", 1, { x: 272, y: 274, width: 124, height: 16 }),
+    part("cross_beam_a", "Lower cross beam A", "cross_beam", railMaterial, "42 x 3 in", 1, { x: 154, y: 252, width: 212, height: 16, angle: -16 }),
+    part("cross_beam_b", "Lower cross beam B", "cross_beam", railMaterial, "42 x 3 in", 1, { x: 154, y: 252, width: 212, height: 16, angle: 16 }),
+    part("screw_set", "Screw points", "fastener_set", screwMaterial, "pre-drill first", 28, {}),
+    part("glue_lines", "Glue lines", "adhesive_lines", glueMaterial, "thin bead", 1, {}),
+    part("sand_pass", "Sanded round edge", "finish_overlay", "sander or sandpaper", "120-220 grit", 1, {}),
+    part("finish_coat", "Clear finish", "finish_overlay", finishMaterial, "2-3 coats", 1, {})
+  ];
+
+  const assembled = {
+    top_left_half: { x: 108, y: 54, width: 152, height: 58 },
+    top_right_half: { x: 260, y: 54, width: 152, height: 58 },
+    seam_batten_a: { x: 196, y: 118, width: 128, height: 14 },
+    seam_batten_b: { x: 196, y: 138, width: 128, height: 14 },
+    apron_front: { x: 154, y: 134, width: 212, height: 16 },
+    apron_back: { x: 154, y: 156, width: 212, height: 16 },
+    leg_left_front: { x: 142, y: 132, width: 38, height: 150, tilt: -10 },
+    leg_left_back: { x: 188, y: 132, width: 34, height: 150, tilt: 7 },
+    leg_right_back: { x: 298, y: 132, width: 34, height: 150, tilt: -7 },
+    leg_right_front: { x: 340, y: 132, width: 38, height: 150, tilt: 10 },
+    foot_left: { x: 124, y: 274, width: 124, height: 16 },
+    foot_right: { x: 272, y: 274, width: 124, height: 16 },
+    cross_beam_a: { x: 154, y: 252, width: 212, height: 16, angle: -16 },
+    cross_beam_b: { x: 154, y: 252, width: 212, height: 16, angle: 16 },
+    screw_set: {
+      points: [
+        [220, 126],
+        [300, 126],
+        [220, 146],
+        [300, 146],
+        [162, 144],
+        [358, 144],
+        [162, 164],
+        [358, 164],
+        [152, 278],
+        [220, 278],
+        [300, 278],
+        [368, 278]
+      ]
+    },
+    glue_lines: {
+      lines: [
+        [260, 58, 260, 110],
+        [196, 116, 324, 116],
+        [154, 134, 366, 134],
+        [154, 156, 366, 156]
+      ]
+    },
+    sand_pass: { x: 92, y: 42, width: 336, height: 260 },
+    finish_coat: { x: 92, y: 42, width: 336, height: 260 }
+  };
+
+  const baseVisible = [
+    "top_left_half",
+    "top_right_half",
+    "seam_batten_a",
+    "seam_batten_b",
+    "apron_front",
+    "apron_back",
+    "leg_left_front",
+    "leg_left_back",
+    "leg_right_back",
+    "leg_right_front",
+    "foot_left",
+    "foot_right",
+    "cross_beam_a",
+    "cross_beam_b"
+  ];
+
+  return {
+    version: "0.3",
+    renderer: "lego_style_round_table_manual",
+    source: "local_vector_interpreter",
+    source_note:
+      "MVP renders the uploaded round table as LEGO-style micro-steps: each page lists the exact pieces needed, adds only a few parts, and highlights the new action. Future cloud mode can replace this with image-to-part segmentation.",
+    view_box: { width: 520, height: 360 },
+    parts,
+    frames: [
+      frame("Read the reference dimensions", "Use the diagram dimensions as the design target before cutting.", [{ part_id: "top_left_half", quantity: 1 }, { part_id: "top_right_half", quantity: 1 }], ["top_left_half", "top_right_half"], ["top_left_half", "top_right_half"], {
+        top_left_half: { x: 104, y: 126, width: 156, height: 64 },
+        top_right_half: { x: 260, y: 126, width: 156, height: 64 }
+      }, {
+        callouts: [
+          { text: "57 in diameter", x: 260, y: 106 },
+          { text: "29.5 in high", x: 412, y: 214 }
+        ]
+      }),
+      frame("Cut the left tabletop half", "Cut one semicircle panel and keep the straight edge clean for the center seam.", [{ part_id: "top_left_half", quantity: 1 }], ["top_left_half"], ["top_left_half"], {
+        top_left_half: { x: 146, y: 132, width: 184, height: 76 }
+      }, {
+        callouts: [{ text: "clean seam edge", x: 316, y: 222 }]
+      }),
+      frame("Cut the right tabletop half", "Cut the matching semicircle so the two halves create a full round top.", [{ part_id: "top_right_half", quantity: 1 }], ["top_left_half", "top_right_half"], ["top_right_half"], {
+        top_left_half: { x: 76, y: 132, width: 184, height: 76 },
+        top_right_half: { x: 260, y: 132, width: 184, height: 76 }
+      }, {
+        arrows: [{ from: [430, 170], to: [444, 170] }],
+        callouts: [{ text: "forms full circle", x: 260, y: 116 }]
+      }),
+      frame("Glue the center seam", "Pull the two tabletop halves together with a thin glue bead at the straight seam.", [{ part_id: "glue_lines", quantity: 1 }], ["top_left_half", "top_right_half", "glue_lines"], ["glue_lines"], {
+        top_left_half: { x: 76, y: 132, width: 184, height: 76 },
+        top_right_half: { x: 260, y: 132, width: 184, height: 76 },
+        glue_lines: { lines: [[260, 128, 260, 212]] }
+      }, {
+        arrows: [{ from: [228, 170], to: [258, 170] }, { from: [292, 170], to: [262, 170] }],
+        callouts: [{ text: "glue seam", x: 260, y: 232 }]
+      }),
+      frame("Add underside seam battens", "Turn the top over and fasten two battens across the center joint.", [{ part_id: "seam_batten_a", quantity: 1 }, { part_id: "seam_batten_b", quantity: 1 }, { part_id: "screw_set", quantity: 4 }], ["top_left_half", "top_right_half", "seam_batten_a", "seam_batten_b", "screw_set"], ["seam_batten_a", "seam_batten_b", "screw_set"], {
+        top_left_half: { x: 108, y: 58, width: 152, height: 58 },
+        top_right_half: { x: 260, y: 58, width: 152, height: 58 },
+        seam_batten_a: { x: 196, y: 134, width: 128, height: 14 },
+        seam_batten_b: { x: 196, y: 160, width: 128, height: 14 },
+        screw_set: { points: [[214, 141], [306, 141], [214, 167], [306, 167]] }
+      }),
+      frame("Cut four angled legs", "Make four matching legs with the same lean angle.", [{ part_id: "leg_left_front", quantity: 1 }, { part_id: "leg_left_back", quantity: 1 }, { part_id: "leg_right_back", quantity: 1 }, { part_id: "leg_right_front", quantity: 1 }], ["leg_left_front", "leg_left_back", "leg_right_back", "leg_right_front"], ["leg_left_front", "leg_left_back", "leg_right_back", "leg_right_front"], {
+        leg_left_front: { x: 124, y: 92, width: 38, height: 174, tilt: -9 },
+        leg_left_back: { x: 198, y: 92, width: 38, height: 174, tilt: 7 },
+        leg_right_back: { x: 284, y: 92, width: 38, height: 174, tilt: -7 },
+        leg_right_front: { x: 358, y: 92, width: 38, height: 174, tilt: 9 }
+      }, {
+        callouts: [{ text: "match angles", x: 260, y: 72 }]
+      }),
+      frame("Build the left leg frame", "Connect the two left legs with the left foot rail.", [{ part_id: "leg_left_front", quantity: 1 }, { part_id: "leg_left_back", quantity: 1 }, { part_id: "foot_left", quantity: 1 }, { part_id: "screw_set", quantity: 2 }], ["leg_left_front", "leg_left_back", "foot_left"], ["foot_left"], {
+        leg_left_front: { x: 168, y: 104, width: 38, height: 160, tilt: -9 },
+        leg_left_back: { x: 244, y: 104, width: 34, height: 160, tilt: 7 },
+        foot_left: { x: 150, y: 270, width: 144, height: 18 }
+      }, {
+        arrows: [{ from: [224, 318], to: [224, 290] }]
+      }),
+      frame("Build the right leg frame", "Repeat the same leg-and-foot assembly for the opposite side.", [{ part_id: "leg_right_back", quantity: 1 }, { part_id: "leg_right_front", quantity: 1 }, { part_id: "foot_right", quantity: 1 }, { part_id: "screw_set", quantity: 2 }], ["leg_left_front", "leg_left_back", "foot_left", "leg_right_back", "leg_right_front", "foot_right"], ["leg_right_back", "leg_right_front", "foot_right"], {
+        leg_left_front: { x: 120, y: 104, width: 34, height: 160, tilt: -9 },
+        leg_left_back: { x: 176, y: 104, width: 30, height: 160, tilt: 7 },
+        foot_left: { x: 102, y: 270, width: 120, height: 18 },
+        leg_right_back: { x: 310, y: 104, width: 30, height: 160, tilt: -7 },
+        leg_right_front: { x: 366, y: 104, width: 34, height: 160, tilt: 9 },
+        foot_right: { x: 292, y: 270, width: 120, height: 18 }
+      }),
+      frame("Add the first cross stretcher", "Run the first lower stretcher diagonally between the two leg frames.", [{ part_id: "cross_beam_a", quantity: 1 }, { part_id: "screw_set", quantity: 2 }], ["leg_left_front", "leg_left_back", "foot_left", "leg_right_back", "leg_right_front", "foot_right", "cross_beam_a"], ["cross_beam_a"], {
+        ...assembled,
+        cross_beam_b: { x: 154, y: 252, width: 212, height: 16, angle: 16 }
+      }, {
+        arrows: [{ from: [116, 250], to: [174, 258] }]
+      }),
+      frame("Add the second cross stretcher", "Install the crossing stretcher to create the X brace.", [{ part_id: "cross_beam_b", quantity: 1 }, { part_id: "screw_set", quantity: 2 }], ["leg_left_front", "leg_left_back", "foot_left", "leg_right_back", "leg_right_front", "foot_right", "cross_beam_a", "cross_beam_b"], ["cross_beam_b"], assembled, {
+        arrows: [{ from: [404, 250], to: [344, 258] }],
+        callouts: [{ text: "X brace", x: 260, y: 238 }]
+      }),
+      frame("Attach front and back apron rails", "Add the rails under the tabletop position to keep the base rigid.", [{ part_id: "apron_front", quantity: 1 }, { part_id: "apron_back", quantity: 1 }, { part_id: "screw_set", quantity: 4 }], ["leg_left_front", "leg_left_back", "leg_right_back", "leg_right_front", "foot_left", "foot_right", "cross_beam_a", "cross_beam_b", "apron_front", "apron_back"], ["apron_front", "apron_back"], assembled, {
+        arrows: [{ from: [260, 104], to: [260, 136] }]
+      }),
+      frame("Place the base under the tabletop", "Center the assembled base under the round tabletop before fastening.", [{ part_id: "top_left_half", quantity: 1 }, { part_id: "top_right_half", quantity: 1 }], baseVisible, ["top_left_half", "top_right_half"], assembled, {
+        callouts: [{ text: "center base", x: 260, y: 34 }]
+      }),
+      frame("Pre-drill tabletop mounting points", "Pre-drill through the apron rails into the underside of the tabletop.", [{ part_id: "screw_set", quantity: 8 }], [...baseVisible, "screw_set"], ["screw_set"], assembled, {
+        callouts: [{ text: "pre-drill upward", x: 392, y: 142 }]
+      }),
+      frame("Fasten the tabletop", "Drive screws after checking that the overhang is even all around.", [{ part_id: "screw_set", quantity: 8 }], [...baseVisible, "screw_set"], ["screw_set"], assembled, {
+        callouts: [{ text: "even overhang", x: 128, y: 82 }]
+      }),
+      frame("Sand the round edge", "Soften the tabletop edge and leg feet before finish.", [{ part_id: "sand_pass", quantity: 1 }], [...baseVisible, "sand_pass"], ["sand_pass"], assembled, {
+        callouts: [{ text: "round edge", x: 394, y: 62 }]
+      }),
+      frame("Apply finish coats", "Apply thin clear coats and let each coat cure before handling.", [{ part_id: "finish_coat", quantity: 1 }], [...baseVisible, "finish_coat"], ["finish_coat"], assembled, {
+        callouts: [{ text: "2-3 coats", x: 390, y: 64 }]
+      }),
+      frame("Final stability check", "Set the table upright, confirm height, and level the feet.", [{ part_id: "foot_left", quantity: 1 }, { part_id: "foot_right", quantity: 1 }], baseVisible, ["foot_left", "foot_right"], assembled, {
+        callouts: [
+          { text: "29.5 in high", x: 428, y: 186 },
+          { text: "level feet", x: 260, y: 316 }
+        ]
+      })
+    ]
+  };
+}
+
+function frame(title, caption, partsNeeded, visibleParts, highlightParts, placements, extras = {}) {
+  return {
+    title,
+    caption,
+    parts_needed: partsNeeded,
+    visible_parts: visibleParts,
+    highlight_parts: highlightParts,
+    placements,
+    ...extras
+  };
+}
+
 function part(id, label, kind, materialName, cutSize, quantity, geometry) {
   return {
     id,
@@ -513,6 +721,7 @@ function findMaterialName(plan, needle) {
 
 function fallbackPlan(preferences) {
   const type = preferences.furnitureType && preferences.furnitureType !== "auto" ? preferences.furnitureType : "side table";
+  if (/\b(round|dining)\b/i.test(type)) return roundTablePlan(preferences, type);
 
   return {
     project: {
@@ -646,6 +855,153 @@ function fallbackPlan(preferences) {
       risk_level: "low",
       missing_inputs: [],
       verifier_notes: ["Fallback plan is generic because no cloud model result was used."]
+    }
+  };
+}
+
+function roundTablePlan(preferences, type) {
+  return {
+    project: {
+      title: "Round Dining Table Build",
+      summary:
+        "A simplified round wood dining table plan based on the uploaded reference, using a two-piece circular top, angled leg frames, and a lower X stretcher.",
+      inspired_by_style: "round wood tabletop with visible grain, angled legs, and crossed lower support rails",
+      recommended_scope:
+        "Build a practical inspired-by round table with simplified joinery instead of copying the exact commercial construction."
+    },
+    detected_object: {
+      category: type,
+      visible_parts: ["round two-piece tabletop", "four angled legs", "apron rails", "lower X stretcher", "foot rails"],
+      likely_materials: ["round tabletop panel", "hardwood boards", "wood screws", "wood glue", "clear polyurethane"],
+      confidence: preferences.imageDataUrl ? 0.68 : 0.35
+    },
+    assumptions: [
+      "The diagram suggests a tabletop around 57 inches in diameter and total height around 29.5 inches.",
+      "The DIY version uses simplified rails and screw/glue joinery suitable for a prototype.",
+      "Final leg angles and overhang should be checked against the real room and tools before cutting."
+    ],
+    difficulty: preferences.skillLevel === "beginner" ? "intermediate" : preferences.skillLevel,
+    estimated_total_cost_usd: {
+      low: 180,
+      high: 360,
+      notes: "Estimate assumes plywood or project panels for the top, hardwood boards for the base, fasteners, glue, and finish."
+    },
+    dimensions: {
+      width_in: 57,
+      depth_in: 57,
+      height_in: 29.5,
+      confidence: 0.74,
+      notes: preferences.targetSize || "Based on the provided dimension diagram: 145 cm diameter and about 75 cm height."
+    },
+    materials: [
+      {
+        name: "round tabletop panel or 3/4 inch oak plywood",
+        category: "panel",
+        quantity: 2,
+        unit: "half-top blanks",
+        estimated_unit_cost_usd: 85,
+        notes: "Use for the two semicircle tabletop halves.",
+        store_query: "3/4 inch oak plywood project panel",
+        alternatives: ["edge-glued round tabletop panel", "hardwood plywood 3/4 inch"]
+      },
+      {
+        name: "2x4 hardwood boards for angled legs",
+        category: "lumber",
+        quantity: 4,
+        unit: "leg blanks",
+        estimated_unit_cost_usd: 18,
+        notes: "Cut four matching angled legs.",
+        store_query: "2x4 hardwood board",
+        alternatives: ["poplar 2x4 board", "oak table leg blank"]
+      },
+      {
+        name: "1x4 hardwood boards for rails and stretchers",
+        category: "lumber",
+        quantity: 4,
+        unit: "8 ft board",
+        estimated_unit_cost_usd: 14,
+        notes: "Use for apron rails, foot rails, seam battens, and the lower X brace.",
+        store_query: "1x4 hardwood board",
+        alternatives: ["poplar 1x4 board", "select pine board 1x4"]
+      },
+      {
+        name: "wood screws 1-1/4 inch",
+        category: "fastener",
+        quantity: 1,
+        unit: "box",
+        estimated_unit_cost_usd: 8,
+        notes: "Pre-drill all holes before driving screws.",
+        store_query: "wood screws 1-1/4 inch",
+        alternatives: ["trim head wood screws", "pocket hole screws"]
+      },
+      {
+        name: "interior wood glue",
+        category: "adhesive",
+        quantity: 1,
+        unit: "bottle",
+        estimated_unit_cost_usd: 6,
+        notes: "Apply at the tabletop seam and support rails.",
+        store_query: "interior wood glue",
+        alternatives: ["premium wood glue", "quick set wood glue"]
+      },
+      {
+        name: "water based polyurethane satin",
+        category: "finish",
+        quantity: 1,
+        unit: "quart",
+        estimated_unit_cost_usd: 22,
+        notes: "Apply thin coats after sanding the tabletop edge and base.",
+        store_query: "water based polyurethane satin",
+        alternatives: ["wipe-on polyurethane", "clear furniture wax"]
+      }
+    ],
+    tools: ["tape measure", "jigsaw or circle-cutting jig", "drill", "sander", "clamps", "square"],
+    steps: [
+      {
+        title: "Confirm diameter and height",
+        detail: "Use the dimension diagram to set the 57 inch tabletop diameter and 29.5 inch finished height.",
+        estimated_minutes: 20,
+        safety_notes: "Confirm your room clearance before cutting a full-size top."
+      },
+      {
+        title: "Cut tabletop halves",
+        detail: "Cut two semicircle blanks and dry-fit the center seam.",
+        estimated_minutes: 65,
+        safety_notes: "Clamp the panel and keep hands clear of the saw path."
+      },
+      {
+        title: "Build the angled base",
+        detail: "Cut four matching legs, connect them with foot rails, and add the lower X stretcher.",
+        estimated_minutes: 95,
+        safety_notes: "Check that all legs sit flat before fastening the cross brace."
+      },
+      {
+        title: "Mount tabletop",
+        detail: "Center the base, pre-drill upward through apron rails, and fasten the top.",
+        estimated_minutes: 45,
+        safety_notes: "Use screws short enough that they cannot poke through the tabletop."
+      },
+      {
+        title: "Sand and finish",
+        detail: "Round the tabletop edge, sand through fine grits, and apply clear finish.",
+        estimated_minutes: 100,
+        safety_notes: "Finish in a ventilated area and follow drying instructions."
+      }
+    ],
+    safety_checks: [
+      "Use this as a furniture prototype plan, not a structural engineering drawing.",
+      "Do not use screws that are longer than the tabletop thickness plus rail thickness allows.",
+      "Confirm table stability before using it for heavy loads."
+    ],
+    routing_notes: [
+      "Image understanding should identify the round top, angled legs, and X stretcher.",
+      "Dimension extraction can be routed to a vision-capable model while material matching stays local."
+    ],
+    evaluation: {
+      buildability_score: 82,
+      risk_level: "medium",
+      missing_inputs: [],
+      verifier_notes: ["Round tabletop cutting requires more precision than the side-table fixture."]
     }
   };
 }

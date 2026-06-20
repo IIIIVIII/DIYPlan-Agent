@@ -36,8 +36,8 @@
 
           <label class="drop-zone" id="drop-zone">
             <input id="image-input" type="file" accept="image/*" />
-            <span class="drop-title">Upload furniture image</span>
-            <span class="drop-meta">JPG, PNG, or WebP</span>
+            <span class="drop-title">Drop furniture image here</span>
+            <span class="drop-meta">Files, browser images, image URLs, or pasted screenshots</span>
           </label>
 
           <div class="preview-wrap" id="preview-wrap" hidden>
@@ -45,7 +45,7 @@
             <button class="text-button" id="clear-image" type="button">Clear image</button>
           </div>
 
-          <button class="secondary-action" id="sample-button" type="button">Use sample side table</button>
+          <button class="secondary-action" id="sample-button" type="button">Use round table sample</button>
 
           <form id="plan-form" class="control-grid">
             <label>
@@ -54,6 +54,7 @@
                 <option value="auto">Auto detect</option>
                 <option value="side table">Side table</option>
                 <option value="coffee table">Coffee table</option>
+                <option value="round dining table">Round dining table</option>
                 <option value="bookshelf">Bookshelf</option>
                 <option value="nightstand">Nightstand</option>
               </select>
@@ -106,6 +107,18 @@
         </aside>
 
         <section class="results-panel" aria-live="polite">
+          <section class="agent-console" id="agent-console" aria-label="Agent workflow console">
+            <div class="agent-console-head">
+              <div>
+                <p class="eyebrow">Agent runtime</p>
+                <h3>Planning agent</h3>
+              </div>
+              <span id="agent-state-pill">Idle</span>
+            </div>
+            <p id="agent-message">Drop an image and the agent will observe, decompose, route, verify, and render a build manual.</p>
+            <div class="agent-steps" id="agent-steps"></div>
+          </section>
+
           <div class="empty-state" id="empty-state">
             <p class="eyebrow">Ready</p>
             <h2>Image in. Build plan out.</h2>

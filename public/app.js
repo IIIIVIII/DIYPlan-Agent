@@ -14,16 +14,31 @@ const emptyState = document.querySelector("#empty-state");
 const loadingState = document.querySelector("#loading-state");
 const errorState = document.querySelector("#error-state");
 const planOutput = document.querySelector("#plan-output");
+const agentStatePill = document.querySelector("#agent-state-pill");
+const agentMessage = document.querySelector("#agent-message");
+const agentSteps = document.querySelector("#agent-steps");
 
 let imageDataUrl = "";
 let pointerX = 0.5;
 let pointerY = 0.5;
+let dragDepth = 0;
+let agentTimer = null;
 const enhancedSelects = new Map();
 const motion = window.gsap;
+const AGENT_PHASES = [
+  ["Observe", "Read the image or dragged source"],
+  ["Measure", "Use user dimensions and visible scale clues"],
+  ["Decompose", "Convert furniture into buildable 2D parts"],
+  ["Route", "Choose cloud, local, or rule stages"],
+  ["Retrieve", "Map parts to hardware-store materials"],
+  ["Manual", "Render micro-step assembly pages"],
+  ["Verify", "Check safety, cost, and missing inputs"]
+];
 
 startLiquidCanvas();
 startCursorGlow();
 enhanceSelects();
+renderAgentConsole("idle");
 animateInitialView();
 checkHealth();
 
@@ -34,6 +49,7 @@ imageInput.addEventListener("change", async (event) => {
 
 dropZone.addEventListener("dragover", (event) => {
   event.preventDefault();
+  event.dataTransfer.dropEffect = "copy";
   dropZone.classList.add("dragging");
 });
 
@@ -42,25 +58,66 @@ dropZone.addEventListener("dragleave", () => {
 });
 
 dropZone.addEventListener("drop", async (event) => {
+  await handleImageDrop(event);
+});
+
+document.addEventListener("dragenter", (event) => {
+  if (!hasImageLikeDrag(event.dataTransfer)) return;
+  dragDepth += 1;
+  document.body.classList.add("dragging-image");
+});
+
+document.addEventListener("dragover", (event) => {
+  if (!hasImageLikeDrag(event.dataTransfer)) return;
   event.preventDefault();
-  dropZone.classList.remove("dragging");
-  const file = event.dataTransfer.files?.[0];
-  if (file) await setImageFromFile(file);
+  event.dataTransfer.dropEffect = "copy";
+});
+
+document.addEventListener("dragleave", () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) document.body.classList.remove("dragging-image");
+});
+
+document.addEventListener("drop", async (event) => {
+  if (!hasImageLikeDrag(event.dataTransfer)) return;
+  await handleImageDrop(event);
+});
+
+document.addEventListener("paste", async (event) => {
+  const active = document.activeElement;
+  const isTyping = active?.matches?.("input, textarea, select, [contenteditable='true']");
+  const imageFile = Array.from(event.clipboardData?.files || []).find((file) =>
+    file.type.startsWith("image/")
+  );
+
+  if (imageFile) {
+    event.preventDefault();
+    await setImageFromFile(imageFile, "Pasted image");
+    return;
+  }
+
+  if (isTyping) return;
+  const text = event.clipboardData?.getData("text/plain")?.trim();
+  if (isLikelyImageUrl(text)) {
+    event.preventDefault();
+    await setImageFromUrl(text, "Pasted image URL");
+  }
 });
 
 clearImageButton.addEventListener("click", () => {
   imageDataUrl = "";
   imageInput.value = "";
   previewWrap.hidden = true;
+  renderAgentConsole("idle");
 });
 
-sampleButton.addEventListener("click", () => {
-  imageDataUrl = sampleImageDataUrl();
-  previewImage.src = imageDataUrl;
-  previewWrap.hidden = false;
-  document.querySelector("#furniture-type").value = "side table";
-  document.querySelector("#target-size").value = "24 W x 18 D x 24 H in";
-  document.querySelector("#budget").value = "$80 - $140";
+sampleButton.addEventListener("click", async () => {
+  await setImageFromUrl("/examples/round-table-photo.png", "Round table sample");
+  document.querySelector("#furniture-type").value = "round dining table";
+  document.querySelector("#target-size").value = "57 in diameter x 29.5 H in";
+  document.querySelector("#budget").value = "$180 - $360";
+  document.querySelector("#zipcode").value = "90024";
+  enhanceSelect(document.querySelector("#furniture-type"));
 });
 
 form.addEventListener("submit", async (event) => {
@@ -92,15 +149,47 @@ function hydrateRoutingStrategies(strategies) {
   enhanceSelect(select);
 }
 
-async function setImageFromFile(file) {
+async function setImageFromFile(file, sourceLabel = "Uploaded image") {
   if (!file.type.startsWith("image/")) {
     showError("Please upload an image file.");
     return;
   }
 
-  imageDataUrl = await readFileAsDataUrl(file);
-  previewImage.src = imageDataUrl;
+  assignImageDataUrl(await readFileAsDataUrl(file), sourceLabel);
+}
+
+async function setImageFromUrl(url, sourceLabel = "Dragged image URL") {
+  if (!url) return;
+  if (url.startsWith("data:image/")) {
+    assignImageDataUrl(url, sourceLabel);
+    return;
+  }
+
+  const parsedUrl = new URL(url, window.location.href);
+  if (parsedUrl.origin === window.location.origin) {
+    const response = await fetch(parsedUrl.href);
+    if (!response.ok) throw new Error("Could not load local sample image.");
+    const blob = await response.blob();
+    if (!blob.type.startsWith("image/")) throw new Error("The dragged URL is not an image.");
+    assignImageDataUrl(await readFileAsDataUrl(blob), sourceLabel);
+    return;
+  }
+
+  const response = await fetch("/api/import-image", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ url: parsedUrl.href })
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not import dragged image.");
+  assignImageDataUrl(payload.imageDataUrl, sourceLabel);
+}
+
+function assignImageDataUrl(dataUrl, sourceLabel) {
+  imageDataUrl = dataUrl;
+  previewImage.src = dataUrl;
   previewWrap.hidden = false;
+  renderAgentConsole("image", { message: `${sourceLabel} loaded. Agent is ready to inspect the furniture.` });
 }
 
 function readFileAsDataUrl(file) {
@@ -112,9 +201,90 @@ function readFileAsDataUrl(file) {
   });
 }
 
+async function handleImageDrop(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  dragDepth = 0;
+  document.body.classList.remove("dragging-image");
+  dropZone.classList.remove("dragging");
+
+  try {
+    const dragged = await extractDraggedImage(event.dataTransfer);
+    if (!dragged) {
+      showError("Drop an image file, browser image, image URL, or pasted screenshot.");
+      return;
+    }
+
+    if (dragged.file) await setImageFromFile(dragged.file, dragged.label);
+    if (dragged.url) await setImageFromUrl(dragged.url, dragged.label);
+  } catch (error) {
+    showError(error.message);
+  }
+}
+
+async function extractDraggedImage(dataTransfer) {
+  const file = Array.from(dataTransfer?.files || []).find((item) =>
+    item.type.startsWith("image/")
+  );
+  if (file) return { file, label: "Dragged image file" };
+
+  const items = Array.from(dataTransfer?.items || []);
+  const fileItem = items.find((item) => item.kind === "file" && item.type.startsWith("image/"));
+  if (fileItem) return { file: fileItem.getAsFile(), label: "Dragged image file" };
+
+  const htmlItem = items.find((item) => item.kind === "string" && item.type === "text/html");
+  if (htmlItem) {
+    const html = await dataTransferItemAsString(htmlItem);
+    const src = extractImageUrlFromHtml(html);
+    if (src) return { url: src, label: "Dragged browser image" };
+  }
+
+  for (const type of ["text/uri-list", "text/plain"]) {
+    const item = items.find((candidate) => candidate.kind === "string" && candidate.type === type);
+    if (!item) continue;
+    const value = (await dataTransferItemAsString(item)).split(/\r?\n/).find((line) => {
+      const trimmed = line.trim();
+      return trimmed && !trimmed.startsWith("#");
+    });
+    if (isLikelyImageUrl(value)) return { url: value.trim(), label: "Dragged image URL" };
+  }
+
+  return null;
+}
+
+function dataTransferItemAsString(item) {
+  return new Promise((resolve) => item.getAsString((value) => resolve(value || "")));
+}
+
+function extractImageUrlFromHtml(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.querySelector("img")?.src || "";
+}
+
+function hasImageLikeDrag(dataTransfer) {
+  const types = Array.from(dataTransfer?.types || []);
+  return types.some((type) =>
+    ["Files", "text/html", "text/uri-list", "text/plain"].includes(type)
+  );
+}
+
+function isLikelyImageUrl(value) {
+  if (!value) return false;
+  if (value.startsWith("data:image/")) return true;
+  try {
+    const url = new URL(value, window.location.href);
+    if (!["http:", "https:"].includes(url.protocol)) return false;
+    const extensionMatch = url.pathname.match(/\.([a-z0-9]+)$/i);
+    return !extensionMatch || ["png", "jpg", "jpeg", "webp", "gif", "avif"].includes(extensionMatch[1].toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
 async function generatePlan() {
   hideError();
   setBusy(true);
+  startAgentRun();
 
   try {
     const response = await fetch("/api/generate-plan", {
@@ -135,8 +305,10 @@ async function generatePlan() {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Plan generation failed.");
     renderPlan(result);
+    finishAgentRun(result);
   } catch (error) {
     showError(error.message);
+    failAgentRun(error.message);
   } finally {
     setBusy(false);
   }
@@ -233,6 +405,72 @@ function renderResearchScores(result) {
   document.querySelector("#research-issues-list").innerHTML = issues.length
     ? issues.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
     : "<li>No major evaluator issues detected.</li>";
+}
+
+function renderAgentConsole(state, options = {}) {
+  const activeIndex = options.activeIndex ?? -1;
+  const message =
+    options.message ||
+    {
+      idle: "Drop an image and the agent will observe, decompose, route, verify, and render a build manual.",
+      image: "Image loaded. The agent is ready to inspect furniture geometry and user constraints.",
+      running: "Agent is running the multimodal planning workflow.",
+      done: "Agent run complete. Review the visual manual, materials, verifier, and trace.",
+      error: "Agent run stopped before producing a complete plan."
+    }[state] ||
+    "Agent runtime ready.";
+
+  agentStatePill.textContent = state === "image" ? "Ready" : state;
+  agentStatePill.dataset.state = state;
+  agentMessage.textContent = message;
+  agentSteps.innerHTML = AGENT_PHASES.map(([label, detail], index) => {
+    const status =
+      state === "done"
+        ? "done"
+        : state === "error" && index === activeIndex
+          ? "error"
+          : index < activeIndex
+            ? "done"
+            : index === activeIndex
+              ? "active"
+              : "queued";
+    return `
+      <div class="agent-step ${status}">
+        <span>${String(index + 1).padStart(2, "0")}</span>
+        <div>
+          <strong>${escapeHtml(label)}</strong>
+          <small>${escapeHtml(detail)}</small>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function startAgentRun() {
+  clearInterval(agentTimer);
+  let activeIndex = 0;
+  renderAgentConsole("running", { activeIndex });
+  agentTimer = setInterval(() => {
+    activeIndex = Math.min(activeIndex + 1, AGENT_PHASES.length - 1);
+    renderAgentConsole("running", { activeIndex });
+  }, 380);
+}
+
+function finishAgentRun(result) {
+  clearInterval(agentTimer);
+  agentTimer = null;
+  const frames = result.plan?.instruction_model?.frames?.length || 0;
+  const parts = result.plan?.instruction_model?.parts?.length || 0;
+  renderAgentConsole("done", {
+    activeIndex: AGENT_PHASES.length,
+    message: `Agent finished: ${parts} parts, ${frames} instruction pages, ${result.purchase_links?.length || 0} store-link groups.`
+  });
+}
+
+function failAgentRun(message) {
+  clearInterval(agentTimer);
+  agentTimer = null;
+  renderAgentConsole("error", { activeIndex: 0, message });
 }
 
 function renderMaterials(materials, purchaseLinks, instructionModel) {
@@ -438,6 +676,22 @@ function renderGenericMaterialChip(material) {
 }
 
 function renderMiniPartShape(part) {
+  if (part.kind?.startsWith("round_half")) {
+    const left = part.kind === "round_half_left";
+    return `
+      <path class="mini-board" d="${left ? "M102 18 L102 58 L30 58 Q10 38 30 18 Z" : "M18 18 L18 58 L90 58 Q110 38 90 18 Z"}" />
+      <path class="mini-grain" d="M30 34 C 48 24, 70 48, 96 34" />
+      <path class="mini-grain" d="M28 46 C 52 38, 72 58, 96 46" />
+    `;
+  }
+
+  if (part.kind === "angled_leg") {
+    return `
+      <polygon class="mini-board" points="46,14 78,14 70,62 38,62" />
+      <path class="mini-grain" d="M56 22 C 48 34, 66 42, 56 56" />
+    `;
+  }
+
   if (part.kind === "fastener_set") {
     return [0, 1, 2, 3, 4, 5]
       .map((index) => `<circle class="mini-fastener" cx="${32 + (index % 3) * 28}" cy="${26 + Math.floor(index / 3) * 22}" r="5" />`)
@@ -529,6 +783,62 @@ function drawInstructionPart(part, placement, state) {
     return `
       <rect class="${classes}" x="${safeNumber(placement.x)}" y="${safeNumber(placement.y)}" width="${safeNumber(placement.width, 120)}" height="${safeNumber(placement.height, 80)}" rx="18"></rect>
       <path class="manual-spark ${state.highlight ? "highlight" : ""}" d="M${safeNumber(placement.x) + 42} ${safeNumber(placement.y) + 28} l8 20 l20 8 l-20 8 l-8 20 l-8 -20 l-20 -8 l20 -8 z"></path>
+    `;
+  }
+
+  if (part.kind?.startsWith("round_half")) {
+    const x = safeNumber(placement.x);
+    const y = safeNumber(placement.y);
+    const width = safeNumber(placement.width, 140);
+    const height = safeNumber(placement.height, 60);
+    const left = part.kind === "round_half_left";
+    const d = left
+      ? `M${x + width} ${y} L${x + width} ${y + height} L${x + width * 0.08} ${y + height} Q${x - width * 0.16} ${y + height / 2} ${x + width * 0.08} ${y} Z`
+      : `M${x} ${y} L${x} ${y + height} L${x + width * 0.92} ${y + height} Q${x + width * 1.16} ${y + height / 2} ${x + width * 0.92} ${y} Z`;
+    const label = !state.compact ? `<text class="manual-part-label" x="${x + width / 2}" y="${y + height / 2 + 4}">${escapeHtml(part.label)}</text>` : "";
+    return `
+      <g class="${classes}">
+        <path d="${d}"></path>
+        <path class="manual-grain" d="M${x + 18} ${y + height * 0.38} C ${x + width * 0.36} ${y + 8}, ${x + width * 0.64} ${y + height - 4}, ${x + width - 18} ${y + height * 0.36}"></path>
+        <path class="manual-grain" d="M${x + 20} ${y + height * 0.68} C ${x + width * 0.38} ${y + height * 0.44}, ${x + width * 0.65} ${y + height + 4}, ${x + width - 20} ${y + height * 0.62}"></path>
+        ${label}
+      </g>
+    `;
+  }
+
+  if (part.kind === "angled_leg") {
+    const x = safeNumber(placement.x);
+    const y = safeNumber(placement.y);
+    const width = safeNumber(placement.width, 34);
+    const height = safeNumber(placement.height, 140);
+    const tilt = safeNumber(placement.tilt, 0);
+    const points = [
+      [x + Math.max(0, tilt), y],
+      [x + width + Math.max(0, tilt), y],
+      [x + width - Math.min(0, tilt), y + height],
+      [x - Math.min(0, tilt), y + height]
+    ]
+      .map((point) => point.join(","))
+      .join(" ");
+    return `
+      <g class="${classes}">
+        <polygon points="${points}"></polygon>
+        <path class="manual-grain" d="M${x + width * 0.45} ${y + 16} C ${x + width * 0.2} ${y + 48}, ${x + width * 0.82} ${y + 80}, ${x + width * 0.45} ${y + height - 18}"></path>
+      </g>
+    `;
+  }
+
+  if (part.kind === "cross_beam") {
+    const x = safeNumber(placement.x);
+    const y = safeNumber(placement.y);
+    const width = safeNumber(placement.width, 160);
+    const height = safeNumber(placement.height, 16);
+    const angle = safeNumber(placement.angle, 0);
+    return `
+      <g class="${classes}" transform="rotate(${angle} ${x + width / 2} ${y + height / 2})">
+        <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6"></rect>
+        <path class="manual-grain" d="M${x + 12} ${y + height * 0.5} C ${x + width * 0.32} ${y + 2}, ${x + width * 0.68} ${y + height - 2}, ${x + width - 12} ${y + height * 0.5}"></path>
+      </g>
     `;
   }
 
@@ -675,22 +985,6 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-function sampleImageDataUrl() {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
-      <rect width="800" height="600" fill="#f4efe4"/>
-      <rect x="150" y="170" width="500" height="58" rx="8" fill="#b98248"/>
-      <rect x="190" y="228" width="72" height="245" fill="#8b5a32"/>
-      <rect x="538" y="228" width="72" height="245" fill="#8b5a32"/>
-      <rect x="220" y="348" width="360" height="42" rx="6" fill="#a46f3d"/>
-      <rect x="142" y="155" width="516" height="24" rx="8" fill="#d29a5b"/>
-      <circle cx="214" cy="500" r="18" fill="#5d4636"/>
-      <circle cx="586" cy="500" r="18" fill="#5d4636"/>
-    </svg>
-  `;
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
 }
 
 function enhanceSelects() {
