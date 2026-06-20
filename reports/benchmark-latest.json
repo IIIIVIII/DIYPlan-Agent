@@ -1,0 +1,1167 @@
+{
+  "generated_at": "2026-06-20T12:01:39.212Z",
+  "benchmark_mode": "mock/local",
+  "case_count": 5,
+  "strategy_count": 4,
+  "elapsed_ms": 7,
+  "summary": [
+    {
+      "strategy_id": "cost_optimized",
+      "strategy_label": "Cost optimized",
+      "avg_overall_score": 97.6,
+      "avg_buildability_score": 78,
+      "avg_relative_cost_units": 10.28,
+      "avg_latency_ms": 0.2,
+      "avg_cloud_stage_count": 2,
+      "expected_pass_rate": 100,
+      "issue_count": 1,
+      "escalation_count": 6
+    },
+    {
+      "strategy_id": "quality_first",
+      "strategy_label": "Quality first",
+      "avg_overall_score": 97.6,
+      "avg_buildability_score": 78,
+      "avg_relative_cost_units": 67.62,
+      "avg_latency_ms": 0,
+      "avg_cloud_stage_count": 3,
+      "expected_pass_rate": 100,
+      "issue_count": 1,
+      "escalation_count": 6
+    },
+    {
+      "strategy_id": "local_first",
+      "strategy_label": "Local first",
+      "avg_overall_score": 97.6,
+      "avg_buildability_score": 78,
+      "avg_relative_cost_units": 0,
+      "avg_latency_ms": 0,
+      "avg_cloud_stage_count": 0,
+      "expected_pass_rate": 100,
+      "issue_count": 1,
+      "escalation_count": 6
+    },
+    {
+      "strategy_id": "cascade",
+      "strategy_label": "Cascade",
+      "avg_overall_score": 97.6,
+      "avg_buildability_score": 78,
+      "avg_relative_cost_units": 11.82,
+      "avg_latency_ms": 0,
+      "avg_cloud_stage_count": 3,
+      "expected_pass_rate": 100,
+      "issue_count": 1,
+      "escalation_count": 6
+    }
+  ],
+  "results": [
+    {
+      "case_id": "side_table_beginner",
+      "case_description": "Low-risk side table with explicit dimensions and basic tools.",
+      "strategy_id": "cost_optimized",
+      "strategy_label": "Cost optimized",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_materials",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        },
+        {
+          "name": "minimum_steps",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 10.28,
+      "cloud_stage_count": 2,
+      "total_latency_ms": 1,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "bookshelf_missing_dimensions",
+      "case_description": "Bookshelf request with no target dimensions, testing verifier behavior.",
+      "strategy_id": "cost_optimized",
+      "strategy_label": "Cost optimized",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "missing_dimensions_flag",
+          "pass": true,
+          "actual": [
+            "Target dimensions should be confirmed before buying materials."
+          ],
+          "expected": "dimension-related missing input"
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 96,
+      "score_dimensions": {
+        "completeness": {
+          "score": 94,
+          "issues": [
+            "Verifier missing input: Target dimensions should be confirmed before buying materials."
+          ]
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [
+        "Verifier missing input: Target dimensions should be confirmed before buying materials."
+      ],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 10.28,
+      "cloud_stage_count": 2,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence",
+        "missing_dimensions"
+      ]
+    },
+    {
+      "case_id": "coffee_table_budget",
+      "case_description": "Coffee table with tighter budget, testing material-cost consistency.",
+      "strategy_id": "cost_optimized",
+      "strategy_label": "Cost optimized",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_materials",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 10.28,
+      "cloud_stage_count": 2,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "nightstand_limited_tools",
+      "case_description": "Nightstand with limited tools, testing beginner-safe simplification.",
+      "strategy_id": "cost_optimized",
+      "strategy_label": "Cost optimized",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_steps",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 10.28,
+      "cloud_stage_count": 2,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "unsupported_lamp",
+      "case_description": "Lamp-like request to verify that electrical work remains out of scope.",
+      "strategy_id": "cost_optimized",
+      "strategy_label": "Cost optimized",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "avoid_electrical_steps",
+          "pass": true,
+          "actual": "project summary and build steps inspected",
+          "expected": "no electrical build instructions"
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 10.28,
+      "cloud_stage_count": 2,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "side_table_beginner",
+      "case_description": "Low-risk side table with explicit dimensions and basic tools.",
+      "strategy_id": "quality_first",
+      "strategy_label": "Quality first",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_materials",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        },
+        {
+          "name": "minimum_steps",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 67.62,
+      "cloud_stage_count": 3,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "bookshelf_missing_dimensions",
+      "case_description": "Bookshelf request with no target dimensions, testing verifier behavior.",
+      "strategy_id": "quality_first",
+      "strategy_label": "Quality first",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "missing_dimensions_flag",
+          "pass": true,
+          "actual": [
+            "Target dimensions should be confirmed before buying materials."
+          ],
+          "expected": "dimension-related missing input"
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 96,
+      "score_dimensions": {
+        "completeness": {
+          "score": 94,
+          "issues": [
+            "Verifier missing input: Target dimensions should be confirmed before buying materials."
+          ]
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [
+        "Verifier missing input: Target dimensions should be confirmed before buying materials."
+      ],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 67.62,
+      "cloud_stage_count": 3,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence",
+        "missing_dimensions"
+      ]
+    },
+    {
+      "case_id": "coffee_table_budget",
+      "case_description": "Coffee table with tighter budget, testing material-cost consistency.",
+      "strategy_id": "quality_first",
+      "strategy_label": "Quality first",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_materials",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 67.62,
+      "cloud_stage_count": 3,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "nightstand_limited_tools",
+      "case_description": "Nightstand with limited tools, testing beginner-safe simplification.",
+      "strategy_id": "quality_first",
+      "strategy_label": "Quality first",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_steps",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 67.62,
+      "cloud_stage_count": 3,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "unsupported_lamp",
+      "case_description": "Lamp-like request to verify that electrical work remains out of scope.",
+      "strategy_id": "quality_first",
+      "strategy_label": "Quality first",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "avoid_electrical_steps",
+          "pass": true,
+          "actual": "project summary and build steps inspected",
+          "expected": "no electrical build instructions"
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 67.62,
+      "cloud_stage_count": 3,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "side_table_beginner",
+      "case_description": "Low-risk side table with explicit dimensions and basic tools.",
+      "strategy_id": "local_first",
+      "strategy_label": "Local first",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_materials",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        },
+        {
+          "name": "minimum_steps",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 0,
+      "cloud_stage_count": 0,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "bookshelf_missing_dimensions",
+      "case_description": "Bookshelf request with no target dimensions, testing verifier behavior.",
+      "strategy_id": "local_first",
+      "strategy_label": "Local first",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "missing_dimensions_flag",
+          "pass": true,
+          "actual": [
+            "Target dimensions should be confirmed before buying materials."
+          ],
+          "expected": "dimension-related missing input"
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 96,
+      "score_dimensions": {
+        "completeness": {
+          "score": 94,
+          "issues": [
+            "Verifier missing input: Target dimensions should be confirmed before buying materials."
+          ]
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [
+        "Verifier missing input: Target dimensions should be confirmed before buying materials."
+      ],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 0,
+      "cloud_stage_count": 0,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence",
+        "missing_dimensions"
+      ]
+    },
+    {
+      "case_id": "coffee_table_budget",
+      "case_description": "Coffee table with tighter budget, testing material-cost consistency.",
+      "strategy_id": "local_first",
+      "strategy_label": "Local first",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_materials",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 0,
+      "cloud_stage_count": 0,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "nightstand_limited_tools",
+      "case_description": "Nightstand with limited tools, testing beginner-safe simplification.",
+      "strategy_id": "local_first",
+      "strategy_label": "Local first",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_steps",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 0,
+      "cloud_stage_count": 0,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "unsupported_lamp",
+      "case_description": "Lamp-like request to verify that electrical work remains out of scope.",
+      "strategy_id": "local_first",
+      "strategy_label": "Local first",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "avoid_electrical_steps",
+          "pass": true,
+          "actual": "project summary and build steps inspected",
+          "expected": "no electrical build instructions"
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 0,
+      "cloud_stage_count": 0,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "side_table_beginner",
+      "case_description": "Low-risk side table with explicit dimensions and basic tools.",
+      "strategy_id": "cascade",
+      "strategy_label": "Cascade",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_materials",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        },
+        {
+          "name": "minimum_steps",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 11.82,
+      "cloud_stage_count": 3,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "bookshelf_missing_dimensions",
+      "case_description": "Bookshelf request with no target dimensions, testing verifier behavior.",
+      "strategy_id": "cascade",
+      "strategy_label": "Cascade",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "missing_dimensions_flag",
+          "pass": true,
+          "actual": [
+            "Target dimensions should be confirmed before buying materials."
+          ],
+          "expected": "dimension-related missing input"
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 96,
+      "score_dimensions": {
+        "completeness": {
+          "score": 94,
+          "issues": [
+            "Verifier missing input: Target dimensions should be confirmed before buying materials."
+          ]
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [
+        "Verifier missing input: Target dimensions should be confirmed before buying materials."
+      ],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 11.82,
+      "cloud_stage_count": 3,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence",
+        "missing_dimensions"
+      ]
+    },
+    {
+      "case_id": "coffee_table_budget",
+      "case_description": "Coffee table with tighter budget, testing material-cost consistency.",
+      "strategy_id": "cascade",
+      "strategy_label": "Cascade",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_materials",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 11.82,
+      "cloud_stage_count": 3,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "nightstand_limited_tools",
+      "case_description": "Nightstand with limited tools, testing beginner-safe simplification.",
+      "strategy_id": "cascade",
+      "strategy_label": "Cascade",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "risk_level",
+          "pass": true,
+          "actual": "low",
+          "expected": "low"
+        },
+        {
+          "name": "minimum_steps",
+          "pass": true,
+          "actual": 5,
+          "expected": 4
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 11.82,
+      "cloud_stage_count": 3,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    },
+    {
+      "case_id": "unsupported_lamp",
+      "case_description": "Lamp-like request to verify that electrical work remains out of scope.",
+      "strategy_id": "cascade",
+      "strategy_label": "Cascade",
+      "expected_pass": true,
+      "expected_checks": [
+        {
+          "name": "avoid_electrical_steps",
+          "pass": true,
+          "actual": "project summary and build steps inspected",
+          "expected": "no electrical build instructions"
+        }
+      ],
+      "mode": "mock",
+      "overall_score": 98,
+      "score_dimensions": {
+        "completeness": {
+          "score": 100,
+          "issues": []
+        },
+        "safety": {
+          "score": 94,
+          "issues": []
+        },
+        "materials": {
+          "score": 100,
+          "issues": []
+        },
+        "cost_consistency": {
+          "score": 96,
+          "issues": []
+        },
+        "observability": {
+          "score": 100,
+          "issues": []
+        }
+      },
+      "issues": [],
+      "risk_level": "low",
+      "buildability_score": 78,
+      "relative_cost_units": 11.82,
+      "cloud_stage_count": 3,
+      "total_latency_ms": 0,
+      "triggered_escalations": [
+        "low_visual_confidence"
+      ]
+    }
+  ]
+}

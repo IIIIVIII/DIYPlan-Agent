@@ -2,14 +2,14 @@ import { planSchema } from "./schema.js";
 
 const responsesUrl = "https://api.openai.com/v1/responses";
 
-export async function callOpenAIPlan({ imageDataUrl, preferences, catalogContextText }) {
+export async function callOpenAIPlan({ imageDataUrl, preferences, catalogContextText, modelOverride }) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is not configured.");
   }
 
-  const model = process.env.OPENAI_MODEL || "gpt-5.5-mini";
-  const strongModel = process.env.OPENAI_STRONG_MODEL || "gpt-5.5";
+  const model = modelOverride || process.env.OPENAI_MODEL || "gpt-4.1-mini";
+  const strongModel = process.env.OPENAI_STRONG_MODEL || "gpt-4.1";
   const routerModel = process.env.OPENAI_ROUTER_MODEL || model;
   const startedAt = performance.now();
 

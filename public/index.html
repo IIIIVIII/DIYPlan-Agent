@@ -53,6 +53,16 @@
             </label>
 
             <label>
+              <span>Routing strategy</span>
+              <select id="routing-strategy">
+                <option value="cost_optimized">Cost optimized</option>
+                <option value="quality_first">Quality first</option>
+                <option value="cascade">Cascade</option>
+                <option value="local_first">Local first</option>
+              </select>
+            </label>
+
+            <label>
               <span>Target size</span>
               <input id="target-size" type="text" placeholder="24 W x 18 D x 24 H in" />
             </label>
@@ -107,6 +117,12 @@
             </header>
 
             <section class="metrics-grid" id="metrics-grid"></section>
+
+            <section class="content-band">
+              <h3>Research Evaluation</h3>
+              <div class="score-grid" id="research-score-grid"></div>
+              <ul class="compact-list" id="research-issues-list"></ul>
+            </section>
 
             <section class="content-band">
               <h3>Materials</h3>

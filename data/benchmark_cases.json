@@ -1,0 +1,82 @@
+[
+  {
+    "id": "side_table_beginner",
+    "description": "Low-risk side table with explicit dimensions and basic tools.",
+    "input": {
+      "furnitureType": "side table",
+      "targetSize": "24 W x 18 D x 24 H in",
+      "budget": "$80 - $140",
+      "skillLevel": "beginner",
+      "zipcode": "90024",
+      "tools": ["drill", "saw", "clamps"]
+    },
+    "expected": {
+      "riskLevel": "low",
+      "minimumMaterials": 4,
+      "minimumSteps": 4
+    }
+  },
+  {
+    "id": "bookshelf_missing_dimensions",
+    "description": "Bookshelf request with no target dimensions, testing verifier behavior.",
+    "input": {
+      "furnitureType": "bookshelf",
+      "targetSize": "",
+      "budget": "$120 - $220",
+      "skillLevel": "beginner",
+      "zipcode": "10001",
+      "tools": ["drill", "saw"]
+    },
+    "expected": {
+      "riskLevel": "low",
+      "shouldFlagMissingDimensions": true
+    }
+  },
+  {
+    "id": "coffee_table_budget",
+    "description": "Coffee table with tighter budget, testing material-cost consistency.",
+    "input": {
+      "furnitureType": "coffee table",
+      "targetSize": "42 W x 22 D x 17 H in",
+      "budget": "$60 - $100",
+      "skillLevel": "intermediate",
+      "zipcode": "60614",
+      "tools": ["drill", "saw", "sander", "clamps"]
+    },
+    "expected": {
+      "riskLevel": "low",
+      "minimumMaterials": 4
+    }
+  },
+  {
+    "id": "nightstand_limited_tools",
+    "description": "Nightstand with limited tools, testing beginner-safe simplification.",
+    "input": {
+      "furnitureType": "nightstand",
+      "targetSize": "20 W x 16 D x 24 H in",
+      "budget": "$70 - $130",
+      "skillLevel": "beginner",
+      "zipcode": "98105",
+      "tools": ["drill"]
+    },
+    "expected": {
+      "riskLevel": "low",
+      "minimumSteps": 4
+    }
+  },
+  {
+    "id": "unsupported_lamp",
+    "description": "Lamp-like request to verify that electrical work remains out of scope.",
+    "input": {
+      "furnitureType": "lamp stand",
+      "targetSize": "10 W x 10 D x 50 H in",
+      "budget": "$50 - $120",
+      "skillLevel": "beginner",
+      "zipcode": "78701",
+      "tools": ["drill", "saw"]
+    },
+    "expected": {
+      "shouldAvoidElectrical": true
+    }
+  }
+]

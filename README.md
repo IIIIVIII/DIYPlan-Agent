@@ -48,6 +48,8 @@ The demo can run in two modes:
 - Home Depot and Lowe's search links
 - Execution trace for each workflow stage
 - Routing policy showing which stages could move to strong cloud models, cheaper models, local models, or deterministic rules
+- Built-in routing strategies: cost optimized, quality first, cascade, and local first
+- Offline benchmark harness for comparing quality, latency, cost units, and escalation triggers
 - Raw JSON output for future evaluation and benchmark work
 
 ## Quick Start
@@ -90,9 +92,9 @@ OPENAI_API_KEY=your_api_key_here
 Optional model configuration:
 
 ```env
-OPENAI_MODEL=gpt-5.5-mini
-OPENAI_STRONG_MODEL=gpt-5.5
-OPENAI_ROUTER_MODEL=gpt-5.5-mini
+OPENAI_MODEL=gpt-4.1-mini
+OPENAI_STRONG_MODEL=gpt-4.1
+OPENAI_ROUTER_MODEL=gpt-4.1-mini
 PORT=5173
 ```
 
@@ -108,10 +110,18 @@ If `OPENAI_API_KEY` is missing, the app still works in mock mode.
 
 ```bash
 npm run check
+npm run benchmark
 npm run dev
 ```
 
 `npm run check` performs syntax checks on the server-side JavaScript files.
+
+`npm run benchmark` runs deterministic benchmark fixtures from `data/benchmark_cases.json` and writes:
+
+```text
+reports/benchmark-latest.json
+reports/benchmark-summary.md
+```
 
 ## Product Flow
 
@@ -134,8 +144,10 @@ Node local server
   |-- input normalization
   |-- multimodal planning call, when API key is available
   |-- deterministic fallback plan, when API key is not available
+  |-- routing strategy selection
   |-- local safety and feasibility verifier
   |-- material-to-store search linking
+  |-- quality evaluator and escalation trigger detector
   |-- routing policy trace
   v
 Structured DIY plan JSON
@@ -151,7 +163,10 @@ Results UI
 ├── START_DEMO.command        # macOS double-click launcher
 ├── README.md                 # project overview and setup
 ├── docs/
-│   └── product-brief.md      # product and research framing
+│   ├── product-brief.md      # product and research framing
+│   └── routing-survey.md     # routing and agent benchmark survey
+├── data/
+│   └── benchmark_cases.json  # deterministic benchmark fixtures
 ├── public/
 │   ├── index.html            # app shell
 │   ├── styles.css            # responsive UI styling
@@ -160,7 +175,14 @@ Results UI
 │   ├── materialCatalog.js    # small local material catalog and store links
 │   ├── openai.js             # OpenAI Responses API call
 │   ├── planner.js            # workflow orchestration and verifier
+│   ├── routing.js            # routing strategies, model profiles, cost units
+│   ├── evaluator.js          # plan quality scoring
 │   └── schema.js             # structured output schema
+├── scripts/
+│   └── run-benchmark.js      # offline benchmark harness
+├── reports/
+│   ├── benchmark-latest.json # generated benchmark output
+│   └── benchmark-summary.md  # generated benchmark summary
 ├── server.js                 # local HTTP server and API routes
 ├── package.json              # scripts
 └── .env.example              # local environment template
@@ -178,7 +200,7 @@ Example:
 {
   "ok": true,
   "cloudModelConfigured": false,
-  "defaultModel": "gpt-5.5-mini"
+  "defaultModel": "gpt-4.1-mini"
 }
 ```
 
@@ -208,10 +230,16 @@ Example response shape:
   "metrics": {
     "total_latency_ms": 1200,
     "cloud_latency_ms": 1130,
-    "model": "gpt-5.5-mini",
-    "estimated_call_count": 1
+    "model": "gpt-4.1-mini",
+    "estimated_call_count": 1,
+    "relative_cost_units": 7.4,
+    "cloud_stage_count": 2
   },
+  "routing_strategy": {},
   "routing_policy": [],
+  "routing_cost": {},
+  "evaluation_report": {},
+  "triggered_escalations": [],
   "trace": [],
   "plan": {},
   "purchase_links": []
@@ -266,6 +294,13 @@ This would allow experiments such as:
 - local verifier plus cloud planner
 - local material matcher plus cloud image understanding
 - cached retrieval and repeated-stage reuse
+
+The current repo already includes the first version of this research layer:
+
+- `src/routing.js` defines fixed routing policies and relative cost units.
+- `src/evaluator.js` scores plan quality across completeness, safety, materials, cost consistency, and observability.
+- `scripts/run-benchmark.js` compares routing strategies across deterministic benchmark cases.
+- `docs/routing-survey.md` summarizes routing and agent-evaluation papers that inform the roadmap.
 
 ## Evaluation Plan
 

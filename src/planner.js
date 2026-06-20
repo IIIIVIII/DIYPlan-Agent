@@ -1,8 +1,20 @@
 import { buildStoreLinks, catalogContext } from "./materialCatalog.js";
 import { callOpenAIPlan } from "./openai.js";
+import { evaluatePlanQuality } from "./evaluator.js";
+import {
+  buildRoutingPolicy,
+  chooseCloudModelForPlan,
+  detectEscalationTriggers,
+  estimateRoutingCost,
+  getRoutingStrategy,
+  shouldUseCloud
+} from "./routing.js";
 
 export async function generatePlan(payload) {
   const preferences = normalizePreferences(payload);
+  const strategy = getRoutingStrategy(preferences.routingStrategy);
+  const routingPolicy = buildRoutingPolicy(strategy);
+  const routingCost = estimateRoutingCost(strategy);
   const startedAt = performance.now();
   const trace = [];
 
@@ -12,12 +24,14 @@ export async function generatePlan(payload) {
   let cloudMetrics = null;
   let mode = "mock";
 
-  if (process.env.OPENAI_API_KEY && preferences.imageDataUrl) {
+  if (shouldUseCloud(preferences, strategy)) {
     const cloudStartedAt = performance.now();
+    const modelOverride = chooseCloudModelForPlan(strategy);
     const result = await callOpenAIPlan({
       imageDataUrl: preferences.imageDataUrl,
       preferences,
-      catalogContextText: catalogContext()
+      catalogContextText: catalogContext(),
+      modelOverride
     });
     plan = result.plan;
     cloudMetrics = result.metrics;
@@ -26,7 +40,7 @@ export async function generatePlan(payload) {
       stage(
         "multimodal-planning",
         result.metrics.model,
-        "Single-call prototype for image understanding, plan generation, and structured output.",
+        `Single-call prototype using ${strategy.label}; later versions can split this into routed stages.`,
         Math.round(performance.now() - cloudStartedAt)
       )
     );
@@ -36,8 +50,8 @@ export async function generatePlan(payload) {
     trace.push(
       stage(
         "mock-planning",
-        "local-fallback",
-        "OPENAI_API_KEY or image was missing, so the demo returned a deterministic sample plan.",
+        strategy.stageModels.plan_generation,
+        "Cloud call was skipped, so the demo returned a deterministic sample plan for routing and benchmark development.",
         Math.round(performance.now() - fallbackStartedAt)
       )
     );
@@ -45,28 +59,61 @@ export async function generatePlan(payload) {
 
   const verified = verifyPlan(plan, preferences);
   const purchaseLinks = buildStoreLinks(verified.materials, preferences.zipcode);
+  const triggeredEscalations = detectEscalationTriggers({ plan: verified, preferences });
 
   trace.push(stage("material-linking", "local-rules", "Mapped generated materials to store search links.", 7));
   trace.push(stage("safety-verifier", "local-rules", "Checked risk terms and missing user constraints.", 5));
   trace.push(
     stage(
       "routing-policy",
-      process.env.OPENAI_ROUTER_MODEL || "gpt-5.5-mini",
-      "Recorded which stages could later move to smaller or local models.",
+      strategy.id,
+      `${strategy.label}: ${strategy.description}`,
       3
     )
   );
 
+  if (triggeredEscalations.length) {
+    trace.push(
+      stage(
+        "escalation-check",
+        strategy.escalation.enabled ? strategy.escalation.fallbackModel || "fallback" : "disabled",
+        `Verifier triggered: ${triggeredEscalations.join(", ")}.`,
+        2
+      )
+    );
+  }
+
+  const metrics = {
+    total_latency_ms: Math.round(performance.now() - startedAt),
+    cloud_latency_ms: cloudMetrics?.cloud_latency_ms || 0,
+    model: cloudMetrics?.model || strategy.stageModels.plan_generation,
+    routing_strategy: strategy.id,
+    estimated_call_count: mode === "cloud" ? 1 : 0,
+    relative_cost_units: routingCost.total_relative_cost_units,
+    cloud_stage_count: routingCost.cloud_stage_count
+  };
+
+  const evaluationReport = evaluatePlanQuality({
+    plan: verified,
+    purchaseLinks,
+    trace,
+    routingCost
+  });
+
   return {
     mode,
     generated_at: new Date().toISOString(),
-    metrics: {
-      total_latency_ms: Math.round(performance.now() - startedAt),
-      cloud_latency_ms: cloudMetrics?.cloud_latency_ms || 0,
-      model: cloudMetrics?.model || "local-fallback",
-      estimated_call_count: mode === "cloud" ? 1 : 0
+    metrics,
+    routing_strategy: {
+      id: strategy.id,
+      label: strategy.label,
+      description: strategy.description,
+      escalation: strategy.escalation
     },
-    routing_policy: routingPolicy(),
+    routing_policy: routingPolicy,
+    routing_cost: routingCost,
+    triggered_escalations: triggeredEscalations,
+    evaluation_report: evaluationReport,
     trace,
     plan: verified,
     purchase_links: purchaseLinks
@@ -88,7 +135,8 @@ function normalizePreferences(payload = {}) {
     budget: String(payload.budget || "").slice(0, 80),
     skillLevel: String(payload.skillLevel || "beginner").slice(0, 40),
     zipcode: String(payload.zipcode || "").replace(/[^\d-]/g, "").slice(0, 10),
-    tools: Array.isArray(payload.tools) ? payload.tools.map((tool) => String(tool).slice(0, 60)) : []
+    tools: Array.isArray(payload.tools) ? payload.tools.map((tool) => String(tool).slice(0, 60)) : [],
+    routingStrategy: String(payload.routingStrategy || "cost_optimized").slice(0, 80)
   };
 }
 
@@ -133,31 +181,6 @@ function verifyPlan(plan, preferences) {
   ];
 
   return next;
-}
-
-function routingPolicy() {
-  return [
-    {
-      stage: "image_understanding",
-      preferred_model: process.env.OPENAI_STRONG_MODEL || "gpt-5.5",
-      reason: "Visual structure and material recognition are quality-sensitive."
-    },
-    {
-      stage: "plan_generation",
-      preferred_model: process.env.OPENAI_MODEL || "gpt-5.5-mini",
-      reason: "Structured generation can start on a cheaper multimodal model, with fallback to a stronger model."
-    },
-    {
-      stage: "material_matching",
-      preferred_model: "local retrieval plus rules",
-      reason: "Catalog matching should not require a frontier model."
-    },
-    {
-      stage: "verification",
-      preferred_model: "local rules plus small judge model",
-      reason: "Safety and consistency checks can be batched and routed to lower-cost inference."
-    }
-  ];
 }
 
 function stage(name, model, note, latencyMs) {

@@ -64,9 +64,21 @@ async function checkHealth() {
     const health = await response.json();
     statusPill.textContent = health.cloudModelConfigured ? "Cloud ready" : "Mock mode";
     statusPill.classList.toggle("cloud", health.cloudModelConfigured);
+    hydrateRoutingStrategies(health.routingStrategies || []);
   } catch {
     statusPill.textContent = "Offline";
   }
+}
+
+function hydrateRoutingStrategies(strategies) {
+  if (!strategies.length) return;
+  const select = document.querySelector("#routing-strategy");
+  select.innerHTML = strategies
+    .map(
+      (strategy) =>
+        `<option value="${escapeHtml(strategy.id)}">${escapeHtml(strategy.label)}</option>`
+    )
+    .join("");
 }
 
 async function setImageFromFile(file) {
@@ -104,13 +116,14 @@ async function generatePlan() {
         targetSize: document.querySelector("#target-size").value,
         budget: document.querySelector("#budget").value,
         zipcode: document.querySelector("#zipcode").value,
+        routingStrategy: document.querySelector("#routing-strategy").value,
         tools: Array.from(document.querySelectorAll('input[name="tools"]:checked')).map((input) => input.value)
       })
     });
 
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Plan generation failed.");
-    renderPlan(result);
+  renderPlan(result);
   } catch (error) {
     showError(error.message);
   } finally {
@@ -143,6 +156,7 @@ function renderPlan(result) {
   );
 
   renderMetrics(result);
+  renderResearchScores(result);
   renderMaterials(plan.materials, result.purchase_links);
   renderSteps(plan.steps);
   renderVerifier(plan);
@@ -157,6 +171,8 @@ function renderMetrics(result) {
   const metrics = [
     [`$${Math.round(cost.low)} - $${Math.round(cost.high)}`, "Estimated material cost"],
     [`${result.metrics.total_latency_ms} ms`, "Workflow latency"],
+    [result.routing_strategy?.label || result.metrics.routing_strategy, "Routing strategy"],
+    [`${result.metrics.relative_cost_units}`, "Relative cost units"],
     [result.metrics.model, "Primary model"],
     [`${dimensions.width_in} x ${dimensions.depth_in} x ${dimensions.height_in} in`, "Suggested size"]
   ];
@@ -171,6 +187,38 @@ function renderMetrics(result) {
       `
     )
     .join("");
+}
+
+function renderResearchScores(result) {
+  const report = result.evaluation_report;
+  const scores = [
+    [report.overall_score, "Overall quality"],
+    [report.dimensions.completeness.score, "Completeness"],
+    [report.dimensions.safety.score, "Safety"],
+    [report.dimensions.materials.score, "Materials"],
+    [report.dimensions.cost_consistency.score, "Cost consistency"],
+    [report.dimensions.observability.score, "Observability"]
+  ];
+
+  document.querySelector("#research-score-grid").innerHTML = scores
+    .map(
+      ([value, label]) => `
+        <div class="mini-score">
+          <strong>${escapeHtml(value)}</strong>
+          <span>${escapeHtml(label)}</span>
+        </div>
+      `
+    )
+    .join("");
+
+  const issues = [
+    ...(result.triggered_escalations || []).map((item) => `Escalation trigger: ${item}`),
+    ...report.issues
+  ];
+
+  document.querySelector("#research-issues-list").innerHTML = issues.length
+    ? issues.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+    : "<li>No major evaluator issues detected.</li>";
 }
 
 function renderMaterials(materials, purchaseLinks) {
@@ -229,7 +277,10 @@ function renderVerifier(plan) {
 
 function renderRouting(policy) {
   document.querySelector("#routing-list").innerHTML = policy
-    .map((item) => `<li><strong>${escapeHtml(item.stage)}</strong>: ${escapeHtml(item.reason)}</li>`)
+    .map(
+      (item) =>
+        `<li><strong>${escapeHtml(item.stage)}</strong>: ${escapeHtml(item.preferred_model)} (${escapeHtml(item.provider)}, cost ${item.relative_cost_units})</li>`
+    )
     .join("");
 }
 

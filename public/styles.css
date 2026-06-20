@@ -384,10 +384,11 @@ code {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.metric {
+.metric,
+.mini-score {
   min-height: 88px;
   padding: 14px;
   border: 1px solid var(--line);
@@ -395,16 +396,30 @@ code {
   background: var(--panel-strong);
 }
 
-.metric strong {
+.metric strong,
+.mini-score strong {
   display: block;
   margin-bottom: 6px;
   font-size: 1.15rem;
 }
 
-.metric span {
+.metric span,
+.mini-score span {
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.mini-score {
+  min-height: 74px;
+  background: #fff;
 }
 
 .content-band,
@@ -540,6 +555,7 @@ pre {
   }
 
   .metrics-grid,
+  .score-grid,
   .two-column-band {
     grid-template-columns: 1fr 1fr;
   }
@@ -563,6 +579,7 @@ pre {
   }
 
   .metrics-grid,
+  .score-grid,
   .two-column-band {
     grid-template-columns: 1fr;
   }

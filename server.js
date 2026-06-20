@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generatePlan } from "./src/planner.js";
+import { listRoutingStrategies } from "./src/routing.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +32,8 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, {
         ok: true,
         cloudModelConfigured: Boolean(process.env.OPENAI_API_KEY),
-        defaultModel: process.env.OPENAI_MODEL || "gpt-5.5-mini"
+        defaultModel: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+        routingStrategies: listRoutingStrategies()
       });
     }
 
