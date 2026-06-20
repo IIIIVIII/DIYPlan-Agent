@@ -213,8 +213,11 @@ function sideTableInstructionModel(plan) {
     part("lower_shelf", "Lower shelf", "panel", boardMaterial, "20 x 14 in", 1, { x: 168, y: 238, width: 184, height: 34 }),
     part("front_rail", "Front rail", "rail", railMaterial, "20 x 2.5 in", 1, { x: 168, y: 172, width: 184, height: 18 }),
     part("back_rail", "Back rail", "rail", railMaterial, "20 x 2.5 in", 1, { x: 168, y: 202, width: 184, height: 18 }),
-    part("screw_set", "Screw points", "fastener_set", screwMaterial, "pre-drill first", 12, {}),
+    part("left_cleat", "Left shelf cleat", "rail", railMaterial, "14 x 1.5 in", 1, { x: 186, y: 214, width: 28, height: 14 }),
+    part("right_cleat", "Right shelf cleat", "rail", railMaterial, "14 x 1.5 in", 1, { x: 306, y: 214, width: 28, height: 14 }),
+    part("screw_set", "Screw points", "fastener_set", screwMaterial, "pre-drill first", 18, {}),
     part("glue_lines", "Glue lines", "adhesive_lines", glueMaterial, "thin bead", 1, {}),
+    part("sand_pass", "Sanded edges", "finish_overlay", "sander or sandpaper", "120-220 grit", 1, {}),
     part("finish_coat", "Satin finish", "finish_overlay", finishMaterial, "2-3 coats", 1, {})
   ];
 
@@ -225,6 +228,8 @@ function sideTableInstructionModel(plan) {
     lower_shelf: { x: 168, y: 226, width: 184, height: 34 },
     front_rail: { x: 168, y: 156, width: 184, height: 18 },
     back_rail: { x: 168, y: 188, width: 184, height: 18 },
+    left_cleat: { x: 184, y: 214, width: 28, height: 14 },
+    right_cleat: { x: 308, y: 214, width: 28, height: 14 },
     screw_set: {
       points: [
         [154, 104],
@@ -246,84 +251,224 @@ function sideTableInstructionModel(plan) {
         [136, 96, 184, 96],
         [336, 96, 384, 96],
         [168, 226, 352, 226],
-        [168, 156, 352, 156]
+        [168, 156, 352, 156],
+        [184, 214, 212, 214],
+        [308, 214, 336, 214]
       ]
     },
+    sand_pass: { x: 118, y: 42, width: 284, height: 242 },
     finish_coat: { x: 118, y: 42, width: 284, height: 242 }
   };
 
   return {
-    version: "0.1",
-    renderer: "2d_vector_manual",
+    version: "0.2",
+    renderer: "step_by_step_vector_manual",
     source: "local_vector_interpreter",
     source_note:
-      "MVP vectorizes the detected furniture into editable 2D parts from the generated plan; future cloud mode can replace this with true image-to-part segmentation.",
+      "MVP renders the plan as LEGO-style micro-steps: each page lists the parts needed, adds only a few pieces, and highlights the new assembly action. Future cloud mode can replace this with true image-to-part segmentation.",
     view_box: { width: 520, height: 360 },
     parts,
     frames: [
       {
-        title: "Separate the visible parts",
-        caption: "Flatten the inspiration image into cut-ready 2D pieces before any assembly.",
-        visible_parts: ["top_panel", "left_side", "right_side", "lower_shelf", "front_rail", "back_rail"],
-        highlight_parts: ["top_panel", "left_side", "right_side", "lower_shelf", "front_rail", "back_rail"],
+        title: "Cut the tabletop",
+        caption: "Start with the largest panel and mark a square, flat tabletop.",
+        parts_needed: [{ part_id: "top_panel", quantity: 1 }],
+        visible_parts: ["top_panel"],
+        highlight_parts: ["top_panel"],
         placements: {
-          top_panel: { x: 128, y: 34, width: 264, height: 44 },
-          left_side: { x: 66, y: 128, width: 48, height: 166 },
-          right_side: { x: 406, y: 128, width: 48, height: 166 },
-          lower_shelf: { x: 154, y: 252, width: 212, height: 34 },
-          front_rail: { x: 154, y: 146, width: 212, height: 18 },
-          back_rail: { x: 154, y: 184, width: 212, height: 18 }
+          top_panel: { x: 118, y: 154, width: 284, height: 48 }
         },
         callouts: [
-          { part_id: "top_panel", text: "top", x: 252, y: 26 },
-          { part_id: "left_side", text: "side x2", x: 62, y: 118 },
-          { part_id: "front_rail", text: "rails", x: 366, y: 146 }
+          { part_id: "top_panel", text: "24 x 18 in", x: 260, y: 138 },
+          { part_id: "top_panel", text: "square corners", x: 382, y: 220 }
         ]
       },
       {
-        title: "Attach side panels to the top",
-        caption: "Dry-fit the two side panels under the tabletop, then check for square corners.",
-        visible_parts: ["top_panel", "left_side", "right_side"],
-        ghost_parts: ["lower_shelf", "front_rail", "back_rail"],
+        title: "Cut two matching side panels",
+        caption: "Make the left and right panels identical so the table sits level.",
+        parts_needed: [
+          { part_id: "left_side", quantity: 1 },
+          { part_id: "right_side", quantity: 1 }
+        ],
+        visible_parts: ["left_side", "right_side"],
         highlight_parts: ["left_side", "right_side"],
-        placements: assembled,
-        arrows: [
-          { from: [160, 294], to: [160, 276] },
-          { from: [360, 294], to: [360, 276] }
-        ],
-        callouts: [{ part_id: "top_panel", text: "keep top flush", x: 256, y: 44 }]
+        placements: {
+          left_side: { x: 156, y: 98, width: 58, height: 178 },
+          right_side: { x: 306, y: 98, width: 58, height: 178 }
+        },
+        callouts: [{ part_id: "left_side", text: "same height", x: 260, y: 74 }]
       },
       {
-        title: "Slide in shelf and rails",
-        caption: "Use the lower shelf and rails to lock the side panels into a rigid rectangular frame.",
-        visible_parts: ["top_panel", "left_side", "right_side", "lower_shelf", "front_rail", "back_rail"],
-        highlight_parts: ["lower_shelf", "front_rail", "back_rail"],
-        placements: assembled,
-        arrows: [
-          { from: [82, 244], to: [164, 244] },
-          { from: [438, 244], to: [356, 244] },
-          { from: [260, 134], to: [260, 156] }
+        title: "Cut shelf, rails, and cleats",
+        caption: "Prepare the smaller support pieces before assembly begins.",
+        parts_needed: [
+          { part_id: "lower_shelf", quantity: 1 },
+          { part_id: "front_rail", quantity: 1 },
+          { part_id: "back_rail", quantity: 1 },
+          { part_id: "left_cleat", quantity: 1 },
+          { part_id: "right_cleat", quantity: 1 }
         ],
-        callouts: [{ part_id: "lower_shelf", text: "shelf sits inside", x: 260, y: 285 }]
+        visible_parts: ["lower_shelf", "front_rail", "back_rail", "left_cleat", "right_cleat"],
+        highlight_parts: ["lower_shelf", "front_rail", "back_rail", "left_cleat", "right_cleat"],
+        placements: {
+          lower_shelf: { x: 152, y: 226, width: 216, height: 36 },
+          front_rail: { x: 152, y: 116, width: 216, height: 18 },
+          back_rail: { x: 152, y: 154, width: 216, height: 18 },
+          left_cleat: { x: 198, y: 190, width: 54, height: 14 },
+          right_cleat: { x: 268, y: 190, width: 54, height: 14 }
+        },
+        callouts: [{ part_id: "front_rail", text: "support pieces", x: 260, y: 92 }]
       },
       {
-        title: "Glue and screw the joints",
-        caption: "Apply glue at contact lines, pre-drill, then drive screws only after the frame is square.",
-        visible_parts: ["top_panel", "left_side", "right_side", "lower_shelf", "front_rail", "back_rail", "glue_lines", "screw_set"],
-        highlight_parts: ["glue_lines", "screw_set"],
+        title: "Pre-drill the side panels",
+        caption: "Mark screw locations before glue-up so the wood does not split.",
+        parts_needed: [{ part_id: "screw_set", quantity: 4 }],
+        visible_parts: ["left_side", "right_side", "screw_set"],
+        highlight_parts: ["screw_set"],
+        placements: {
+          left_side: { x: 156, y: 98, width: 58, height: 178 },
+          right_side: { x: 306, y: 98, width: 58, height: 178 },
+          screw_set: {
+            points: [
+              [172, 116],
+              [198, 116],
+              [322, 116],
+              [348, 116],
+              [172, 244],
+              [198, 244],
+              [322, 244],
+              [348, 244]
+            ]
+          }
+        },
+        callouts: [{ part_id: "screw_set", text: "pilot holes", x: 260, y: 74 }]
+      },
+      {
+        title: "Add glue under the tabletop",
+        caption: "Use a thin bead where the side panels will meet the top.",
+        parts_needed: [{ part_id: "glue_lines", quantity: 1 }],
+        visible_parts: ["top_panel", "glue_lines"],
+        highlight_parts: ["glue_lines"],
+        placements: {
+          top_panel: { x: 130, y: 94, width: 260, height: 44 },
+          glue_lines: {
+            lines: [
+              [146, 144, 194, 144],
+              [326, 144, 374, 144]
+            ]
+          }
+        },
+        callouts: [{ part_id: "glue_lines", text: "thin bead", x: 260, y: 176 }]
+      },
+      {
+        title: "Attach the left side panel",
+        caption: "Place one side panel under the tabletop and keep the outside edge flush.",
+        parts_needed: [
+          { part_id: "left_side", quantity: 1 },
+          { part_id: "screw_set", quantity: 2 }
+        ],
+        visible_parts: ["top_panel", "left_side"],
+        ghost_parts: ["right_side"],
+        highlight_parts: ["left_side"],
+        placements: assembled,
+        arrows: [{ from: [160, 304], to: [160, 276] }],
+        callouts: [{ part_id: "left_side", text: "flush outside", x: 98, y: 132 }]
+      },
+      {
+        title: "Attach the right side panel",
+        caption: "Add the second side panel and check that both panels are parallel.",
+        parts_needed: [
+          { part_id: "right_side", quantity: 1 },
+          { part_id: "screw_set", quantity: 2 }
+        ],
+        visible_parts: ["top_panel", "left_side", "right_side"],
+        highlight_parts: ["right_side"],
+        placements: assembled,
+        arrows: [{ from: [360, 304], to: [360, 276] }],
+        callouts: [{ part_id: "right_side", text: "parallel sides", x: 418, y: 132 }]
+      },
+      {
+        title: "Install the back rail",
+        caption: "Fit the rear rail first so the side panels stay square.",
+        parts_needed: [
+          { part_id: "back_rail", quantity: 1 },
+          { part_id: "screw_set", quantity: 2 }
+        ],
+        visible_parts: ["top_panel", "left_side", "right_side", "back_rail"],
+        highlight_parts: ["back_rail"],
+        placements: assembled,
+        arrows: [{ from: [260, 132], to: [260, 188] }],
+        callouts: [{ part_id: "back_rail", text: "rear support", x: 260, y: 218 }]
+      },
+      {
+        title: "Install the front rail",
+        caption: "Add the front rail at the same height as the rear rail.",
+        parts_needed: [
+          { part_id: "front_rail", quantity: 1 },
+          { part_id: "screw_set", quantity: 2 }
+        ],
+        visible_parts: ["top_panel", "left_side", "right_side", "back_rail", "front_rail"],
+        highlight_parts: ["front_rail"],
+        placements: assembled,
+        arrows: [{ from: [260, 128], to: [260, 156] }],
+        callouts: [{ part_id: "front_rail", text: "front support", x: 260, y: 146 }]
+      },
+      {
+        title: "Add shelf support cleats",
+        caption: "Attach the two short cleats so the lower shelf has a ledge to rest on.",
+        parts_needed: [
+          { part_id: "left_cleat", quantity: 1 },
+          { part_id: "right_cleat", quantity: 1 },
+          { part_id: "screw_set", quantity: 4 }
+        ],
+        visible_parts: ["top_panel", "left_side", "right_side", "back_rail", "front_rail", "left_cleat", "right_cleat"],
+        highlight_parts: ["left_cleat", "right_cleat"],
+        placements: assembled,
+        arrows: [
+          { from: [102, 220], to: [184, 220] },
+          { from: [418, 220], to: [336, 220] }
+        ],
+        callouts: [{ part_id: "left_cleat", text: "shelf ledge", x: 260, y: 244 }]
+      },
+      {
+        title: "Slide in the lower shelf",
+        caption: "Set the shelf on the cleats and center it between the side panels.",
+        parts_needed: [{ part_id: "lower_shelf", quantity: 1 }],
+        visible_parts: ["top_panel", "left_side", "right_side", "back_rail", "front_rail", "left_cleat", "right_cleat", "lower_shelf"],
+        highlight_parts: ["lower_shelf"],
+        placements: assembled,
+        arrows: [{ from: [82, 242], to: [164, 242] }],
+        callouts: [{ part_id: "lower_shelf", text: "center shelf", x: 260, y: 286 }]
+      },
+      {
+        title: "Lock the shelf and rails",
+        caption: "Drive the remaining screws after the frame is square.",
+        parts_needed: [{ part_id: "screw_set", quantity: 8 }],
+        visible_parts: ["top_panel", "left_side", "right_side", "back_rail", "front_rail", "left_cleat", "right_cleat", "lower_shelf", "screw_set"],
+        highlight_parts: ["screw_set"],
         placements: assembled,
         callouts: [
-          { part_id: "screw_set", text: "pre-drill", x: 408, y: 110 },
-          { part_id: "glue_lines", text: "thin glue bead", x: 110, y: 154 }
+          { part_id: "screw_set", text: "tighten last", x: 410, y: 108 },
+          { part_id: "screw_set", text: "check square", x: 110, y: 154 }
         ]
       },
       {
-        title: "Sand edges and apply finish",
-        caption: "Round sharp edges, sand evenly, and apply thin satin coats after test-fitting.",
-        visible_parts: ["top_panel", "left_side", "right_side", "lower_shelf", "front_rail", "back_rail", "finish_coat"],
+        title: "Sand every exposed edge",
+        caption: "Round sharp corners and sand with the grain before applying finish.",
+        parts_needed: [{ part_id: "sand_pass", quantity: 1 }],
+        visible_parts: ["top_panel", "left_side", "right_side", "back_rail", "front_rail", "left_cleat", "right_cleat", "lower_shelf", "sand_pass"],
+        highlight_parts: ["sand_pass"],
+        placements: assembled,
+        callouts: [{ part_id: "sand_pass", text: "round edges", x: 386, y: 58 }]
+      },
+      {
+        title: "Apply thin finish coats",
+        caption: "Use two to three thin coats and let each coat dry fully.",
+        parts_needed: [{ part_id: "finish_coat", quantity: 1 }],
+        visible_parts: ["top_panel", "left_side", "right_side", "back_rail", "front_rail", "left_cleat", "right_cleat", "lower_shelf", "finish_coat"],
         highlight_parts: ["finish_coat"],
         placements: assembled,
-        callouts: [{ part_id: "finish_coat", text: "finish after dry fit", x: 384, y: 48 }]
+        callouts: [{ part_id: "finish_coat", text: "2-3 thin coats", x: 382, y: 58 }]
       }
     ]
   };

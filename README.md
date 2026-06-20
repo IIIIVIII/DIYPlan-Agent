@@ -41,7 +41,7 @@ The demo can run in two modes:
 - Image upload with preview
 - Sample furniture image for quick testing
 - Structured DIY plan generation
-- 2D visual instruction manual with part decomposition, assembly frames, arrows, callouts, and step thumbnails
+- 14-page LEGO-inspired 2D instruction manual with per-step part bins, part decomposition, arrows, callouts, and step thumbnails
 - Material list with quantities, rough costs, alternatives, and store search queries
 - Material cards that show which 2D parts each material produces
 - Tool list and visual step-by-step build instructions

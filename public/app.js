@@ -330,12 +330,13 @@ function renderInstructionManual(instructionModel) {
       (frame, index) => `
         <article class="manual-page">
           <div class="manual-page-head">
-            <span>${String(index + 1).padStart(2, "0")}</span>
+            <span>${index + 1}</span>
             <div>
               <h4>${escapeHtml(frame.title)}</h4>
               <p>${escapeHtml(frame.caption)}</p>
             </div>
           </div>
+          ${renderFramePartsBin(parts, frame)}
           ${renderInstructionSvg(instructionModel, frame)}
         </article>
       `
@@ -393,6 +394,35 @@ function renderPartChip(part) {
       </svg>
       <em>${escapeHtml(part.label)}</em>
     </span>
+  `;
+}
+
+function renderFramePartsBin(parts, frame) {
+  const partById = new Map(parts.map((part) => [part.id, part]));
+  const needed = frame.parts_needed?.length
+    ? frame.parts_needed
+    : (frame.highlight_parts || []).map((partId) => ({ part_id: partId, quantity: partById.get(partId)?.quantity || 1 }));
+
+  if (!needed.length) return "";
+
+  return `
+    <div class="step-parts-bin" aria-label="Parts needed for this step">
+      <span>Pieces needed</span>
+      <div class="needed-parts-grid">
+        ${needed
+          .map((item) => {
+            const part = partById.get(item.part_id);
+            if (!part) return "";
+            return `
+              <div class="needed-part">
+                ${renderPartChip(part)}
+                <strong>x${escapeHtml(item.quantity || 1)}</strong>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
   `;
 }
 

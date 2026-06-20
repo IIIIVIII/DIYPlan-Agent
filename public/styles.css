@@ -994,20 +994,22 @@ code {
 }
 
 .manual-page {
-  border: 1px solid rgba(246, 240, 223, 0.18);
+  overflow: hidden;
+  border: 1px solid rgba(42, 76, 102, 0.36);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(246, 240, 223, 0.1), rgba(246, 240, 223, 0.04)),
-    rgba(0, 0, 0, 0.2);
+    linear-gradient(180deg, #dff2ff 0%, #c7e4f7 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
   padding: 12px;
 }
 
 .manual-page-head {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 11px;
+  gap: 12px;
   align-items: start;
   margin-bottom: 10px;
+  color: #17212a;
 }
 
 .manual-page-head > span,
@@ -1018,22 +1020,78 @@ code {
   height: 34px;
   border: 1px solid rgba(20, 22, 15, 0.16);
   border-radius: 50%;
-  background: var(--acid);
-  color: #12150c;
+  background: #ffffff;
+  color: #0d141a;
   font-size: 0.76rem;
   font-weight: 950;
 }
 
+.manual-page-head > span {
+  width: 44px;
+  height: 44px;
+  border: 2px solid rgba(22, 42, 56, 0.32);
+  font-size: 1.15rem;
+}
+
 .manual-page h4 {
   margin: 0 0 4px;
-  color: var(--cream);
+  color: #101820;
   font-size: 1.1rem;
 }
 
 .manual-page p {
   margin: 0;
-  color: var(--muted);
+  color: rgba(16, 24, 32, 0.72);
   line-height: 1.45;
+}
+
+.step-parts-bin {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(22, 42, 56, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 9px;
+}
+
+.step-parts-bin > span {
+  color: rgba(16, 24, 32, 0.62);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.needed-parts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.needed-part {
+  position: relative;
+  min-width: 0;
+}
+
+.needed-part .part-chip em {
+  color: rgba(16, 24, 32, 0.62);
+}
+
+.needed-part strong {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 24px;
+  border: 1px solid rgba(22, 42, 56, 0.24);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #101820;
+  font-size: 0.72rem;
+  font-weight: 950;
 }
 
 .instruction-svg {
@@ -1042,7 +1100,7 @@ code {
   overflow: hidden;
   border: 1px solid rgba(20, 22, 15, 0.2);
   border-radius: 8px;
-  background: #f4edd9;
+  background: #fffaf0;
   color: #233111;
 }
 
@@ -1051,7 +1109,7 @@ code {
 }
 
 .manual-paper-bg {
-  fill: #f4edd9;
+  fill: #fffaf0;
 }
 
 .manual-grid-lines line {
@@ -1132,7 +1190,7 @@ code {
 .manual-arrows line {
   stroke: currentColor;
   stroke-linecap: round;
-  stroke-width: 5;
+  stroke-width: 6;
 }
 
 .manual-callouts rect {
