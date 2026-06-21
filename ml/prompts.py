@@ -139,6 +139,23 @@ def instruction_prompt(preferences: dict, perception: dict) -> str:
     )
 
 
+def translation_prompt(texts: List[str], target_language: str) -> str:
+    """Translate a list of strings, preserving order and count.
+
+    Numbers, units, and dimensions stay as-is; only natural language is
+    translated. Returns a strict JSON array so it maps back 1:1.
+    """
+    return (
+        "You are a professional UI/technical translator for a DIY furniture app. "
+        f"Translate each string in the array below into {target_language}. "
+        "Keep numbers, measurements, units (in, cm, ft), and product codes "
+        "unchanged. Keep it natural and concise. Do NOT add or remove items.\n\n"
+        "Return ONLY a JSON object of the form {\"translations\": [...]} with "
+        "exactly the same number of items, in the same order. No extra text.\n\n"
+        f"Input ({len(texts)} items):\n{json.dumps(texts, ensure_ascii=False)}"
+    )
+
+
 def _plan_schema_hint() -> str:
     hint = {
         "project": {

@@ -56,14 +56,25 @@ def load_vlm() -> Tuple[object, object, object]:
     return model, processor, model_config
 
 
-def vlm_generate(prompt: str, image_path: Optional[str]) -> str:
-    """Run a single VLM generation and return decoded text."""
+def vlm_generate(prompt: str, image_path=None) -> str:
+    """Run a single VLM generation and return decoded text.
+
+    `image_path` may be a single path, a list of paths (multi-image grounding
+    for more detail), or None for a text-only call (e.g. translation).
+    """
     from mlx_vlm import generate
     from mlx_vlm.prompt_utils import apply_chat_template
 
     model, processor, model_config = load_vlm()
 
-    num_images = 1 if image_path else 0
+    if isinstance(image_path, (list, tuple)):
+        images = [p for p in image_path if p]
+    elif image_path:
+        images = [image_path]
+    else:
+        images = []
+    num_images = len(images)
+
     try:
         formatted = apply_chat_template(
             processor, model_config, prompt, num_images=num_images
@@ -72,7 +83,6 @@ def vlm_generate(prompt: str, image_path: Optional[str]) -> str:
         # Older signature without num_images.
         formatted = apply_chat_template(processor, model_config, prompt)
 
-    images = [image_path] if image_path else []
     result = generate(
         model,
         processor,

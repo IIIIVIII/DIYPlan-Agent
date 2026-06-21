@@ -26,14 +26,15 @@ export async function checkLocalBackend() {
   }
 }
 
-export async function callLocalPlan({ imageDataUrl, preferences }) {
+export async function callLocalPlan({ imageDataUrl, imageDataUrls, preferences }) {
   const startedAt = performance.now();
+  const urls = imageDataUrls?.length ? imageDataUrls : imageDataUrl ? [imageDataUrl] : [];
   const response = await fetchWithTimeout(
     `${backendUrl()}/plan`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ imageDataUrl, preferences })
+      body: JSON.stringify({ imageDataUrls: urls, preferences })
     },
     timeoutMs()
   );
@@ -59,6 +60,8 @@ export async function callLocalPlan({ imageDataUrl, preferences }) {
     perception: body.perception || null,
     retrieval: body.retrieval || [],
     instructionModel: body.instruction_model || null,
+    partCutouts: body.part_cutouts || null,
+    dominantColor: body.dominant_color || null,
     stages: body.stages || [],
     metrics: {
       ...(body.metrics || {}),
@@ -66,6 +69,42 @@ export async function callLocalPlan({ imageDataUrl, preferences }) {
       local_latency_ms: body.metrics?.local_latency_ms ?? Math.round(performance.now() - startedAt)
     }
   };
+}
+
+export async function callLocalUnderstand({ imageDataUrls, preferences }) {
+  const response = await fetchWithTimeout(
+    `${backendUrl()}/understand`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ imageDataUrls: imageDataUrls || [], preferences: preferences || {} })
+    },
+    timeoutMs()
+  );
+  if (!response.ok) {
+    const error = new Error(`Local understand failed (${response.status}).`);
+    error.statusCode = 502;
+    throw error;
+  }
+  return response.json();
+}
+
+export async function callLocalTranslate({ texts, targetLang }) {
+  const response = await fetchWithTimeout(
+    `${backendUrl()}/translate`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ texts: texts || [], target_lang: targetLang || "en" })
+    },
+    timeoutMs()
+  );
+  if (!response.ok) {
+    const error = new Error(`Local translate failed (${response.status}).`);
+    error.statusCode = 502;
+    throw error;
+  }
+  return response.json();
 }
 
 async function fetchWithTimeout(url, options, ms) {

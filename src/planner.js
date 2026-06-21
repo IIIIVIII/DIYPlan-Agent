@@ -1,6 +1,6 @@
 import { buildStoreLinks, catalogContext } from "./materialCatalog.js";
 import { callOpenAIPlan } from "./openai.js";
-import { callLocalPlan, checkLocalBackend, localBackendConfigured } from "./localBackend.js";
+import { callLocalPlan, callLocalUnderstand, checkLocalBackend, localBackendConfigured } from "./localBackend.js";
 import { evaluatePlanQuality } from "./evaluator.js";
 import {
   buildRoutingPolicy,
@@ -37,6 +37,7 @@ export async function generatePlan(payload) {
       try {
         localResult = await callLocalPlan({
           imageDataUrl: preferences.imageDataUrl,
+          imageDataUrls: preferences.imageDataUrls,
           preferences
         });
         plan = localResult.plan;
@@ -102,8 +103,10 @@ export async function generatePlan(payload) {
   }
 
   const verified = verifyPlan(plan, preferences);
-  if (localResult?.instructionModel?.parts?.length && localResult.instructionModel.frames?.length) {
-    verified.instruction_model = localResult.instructionModel;
+  // Keep Node's IKEA-style template manual, but drop the real parts segmented
+  // 1:1 from the photo into the matching slots.
+  if (localResult?.partCutouts) {
+    attachPhotoCutouts(verified.instruction_model, localResult.partCutouts, localResult.dominantColor);
   }
   const purchaseLinks = buildStoreLinks(verified.materials, preferences.zipcode);
   const triggeredEscalations = detectEscalationTriggers({ plan: verified, preferences });
@@ -172,23 +175,116 @@ export async function generatePlan(payload) {
 }
 
 function normalizePreferences(payload = {}) {
-  const imageDataUrl = String(payload.imageDataUrl || "");
-  if (imageDataUrl && !imageDataUrl.startsWith("data:image/")) {
-    const error = new Error("imageDataUrl must be a data:image URL.");
-    error.statusCode = 400;
-    throw error;
-  }
+  const imageDataUrls = collectImageDataUrls(payload);
+  const imageDataUrl = imageDataUrls[0] || "";
 
   return {
     imageDataUrl,
+    imageDataUrls,
     furnitureType: String(payload.furnitureType || "auto").slice(0, 80),
     targetSize: String(payload.targetSize || "").slice(0, 120),
     budget: String(payload.budget || "").slice(0, 80),
     skillLevel: String(payload.skillLevel || "beginner").slice(0, 40),
     zipcode: String(payload.zipcode || "").replace(/[^\d-]/g, "").slice(0, 10),
     tools: Array.isArray(payload.tools) ? payload.tools.map((tool) => String(tool).slice(0, 60)) : [],
-    routingStrategy: String(payload.routingStrategy || "cost_optimized").slice(0, 80)
+    routingStrategy: String(payload.routingStrategy || "local_mlx").slice(0, 80)
   };
+}
+
+function collectImageDataUrls(payload) {
+  const raw = [];
+  if (Array.isArray(payload.imageDataUrls)) raw.push(...payload.imageDataUrls);
+  if (payload.imageDataUrl) raw.push(payload.imageDataUrl);
+  const urls = [];
+  for (const value of raw) {
+    const url = String(value || "");
+    if (!url) continue;
+    if (!url.startsWith("data:image/")) {
+      const error = new Error("Each image must be a data:image URL.");
+      error.statusCode = 400;
+      throw error;
+    }
+    if (!urls.includes(url)) urls.push(url);
+  }
+  // Keep the payload bounded: a handful of angles is plenty of detail.
+  return urls.slice(0, 6);
+}
+
+const FURNITURE_OPTIONS = [
+  "side table",
+  "coffee table",
+  "round dining table",
+  "bookshelf",
+  "nightstand"
+];
+
+export async function analyzeImage(payload) {
+  const preferences = normalizePreferences(payload);
+  if (!preferences.imageDataUrl) {
+    const error = new Error("Upload at least one photo before analyzing.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let perception = null;
+  if (localBackendConfigured() || strategyPrefersLocalMlx(getRoutingStrategy(preferences.routingStrategy))) {
+    const health = await checkLocalBackend();
+    if (health.available) {
+      try {
+        const result = await callLocalUnderstand({
+          imageDataUrls: preferences.imageDataUrls,
+          preferences
+        });
+        perception = result.perception || null;
+      } catch {
+        perception = null;
+      }
+    }
+  }
+
+  return suggestionsFromPerception(perception, preferences);
+}
+
+function suggestionsFromPerception(perception, preferences) {
+  const category = String(perception?.category || preferences.furnitureType || "side table").toLowerCase();
+  const furnitureType = matchFurnitureOption(category);
+  const isRound = /round|dining/.test(furnitureType);
+  const isShelf = /shelf|book/.test(furnitureType);
+  const risk = String(perception?.risk_level || "low").toLowerCase();
+
+  const targetSize =
+    perception?.approx_dimensions_note && !/not |unknown|n\/a/i.test(perception.approx_dimensions_note)
+      ? perception.approx_dimensions_note
+      : isRound
+        ? "48 in diameter x 29 H in"
+        : isShelf
+          ? "32 W x 12 D x 60 H in"
+          : "24 W x 18 D x 24 H in";
+
+  const budget = isRound ? "$180 - $360" : isShelf ? "$90 - $200" : "$60 - $150";
+  const skillLevel = isRound || risk === "high" ? "intermediate" : "beginner";
+  const tools = ["drill", "saw", "sander", "clamps"];
+
+  return {
+    perception: perception || null,
+    suggestions: {
+      furnitureType,
+      targetSize,
+      budget,
+      skillLevel,
+      tools,
+      description: perception?.style || ""
+    }
+  };
+}
+
+function matchFurnitureOption(category) {
+  if (/round|dining/.test(category)) return "round dining table";
+  if (/book|shelf|bookcase/.test(category)) return "bookshelf";
+  if (/coffee/.test(category)) return "coffee table";
+  if (/night|bedside/.test(category)) return "nightstand";
+  if (FURNITURE_OPTIONS.includes(category)) return category;
+  return "side table";
 }
 
 function verifyPlan(plan, preferences) {
@@ -242,6 +338,67 @@ function stage(name, model, note, latencyMs) {
     note,
     latency_ms: latencyMs
   };
+}
+
+const WOOD_KINDS = new Set([
+  "panel",
+  "rail",
+  "angled_leg",
+  "cross_beam",
+  "round_top_half_left",
+  "round_top_half_right",
+  "foot_rail"
+]);
+
+function kindToCutoutRole(part) {
+  switch (part.kind) {
+    case "round_top_half_left":
+      return "top_half_left";
+    case "round_top_half_right":
+      return "top_half_right";
+    case "angled_leg":
+      return "leg";
+    case "cross_beam":
+      return "brace";
+    case "foot_rail":
+      return "foot";
+    case "panel":
+      if (/top/i.test(part.id)) return "top";
+      if (/shelf/i.test(part.id)) return "shelf";
+      if (/side|upright/i.test(part.id)) return "side";
+      return "top";
+    default:
+      return null;
+  }
+}
+
+function attachPhotoCutouts(model, partCutouts, tint) {
+  if (!model || !Array.isArray(model.parts)) return;
+  const queues = {};
+  for (const [role, list] of Object.entries(partCutouts || {})) {
+    queues[role] = Array.isArray(list) ? [...list] : [];
+  }
+
+  let cutCount = 0;
+  for (const part of model.parts) {
+    const role = kindToCutoutRole(part);
+    const cut = role && queues[role]?.length ? queues[role].shift() : null;
+    if (cut?.image) {
+      part.image = cut.image;
+      part.img_w = cut.img_w;
+      part.img_h = cut.img_h;
+      part.has_cutout = true;
+      cutCount += 1;
+    } else if (tint && WOOD_KINDS.has(part.kind)) {
+      part.color = tint;
+    }
+  }
+
+  if (cutCount) {
+    model.source = "photo_cutout";
+    model.source_note =
+      "Original assembly-book layout, with each visible part segmented 1:1 from your photo (GroundingDINO + SAM2). Hidden structural parts keep a simplified shape tinted to the object's color.";
+  }
 }
 
 function buildInstructionModel(plan, preferences) {

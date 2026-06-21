@@ -1,7 +1,8 @@
 const imageInput = document.querySelector("#image-input");
 const dropZone = document.querySelector("#drop-zone");
-const previewWrap = document.querySelector("#preview-wrap");
-const previewImage = document.querySelector("#preview-image");
+const thumbs = document.querySelector("#thumbs");
+const previewActions = document.querySelector("#preview-actions");
+const analyzeButton = document.querySelector("#analyze-button");
 const referenceWrap = document.querySelector("#reference-wrap");
 const referenceImage = document.querySelector("#reference-image");
 const clearImageButton = document.querySelector("#clear-image");
@@ -20,11 +21,14 @@ const agentStatePill = document.querySelector("#agent-state-pill");
 const agentMessage = document.querySelector("#agent-message");
 const agentSteps = document.querySelector("#agent-steps");
 
-let imageDataUrl = "";
+let imageDataUrls = [];
 let pointerX = 0.5;
 let pointerY = 0.5;
 let dragDepth = 0;
 let agentTimer = null;
+let currentLang = localStorage.getItem("diyplan_lang") || "en";
+let lastResultBase = null; // original (English) result for re-translation
+const translationCache = new Map(); // lang -> translated result
 const enhancedSelects = new Map();
 const motion = window.gsap;
 const AGENT_PHASES = [
@@ -37,16 +41,265 @@ const AGENT_PHASES = [
   ["Verify", "Check safety, cost, and missing inputs"]
 ];
 
+const I18N = {
+  en: {
+    "nav.plan": "Plan",
+    "nav.evaluate": "Evaluate",
+    "brand.eyebrow": "Multimodal routing studio",
+    "status.checking": "Checking",
+    "status.localReady": "Local MLX ready",
+    "status.cloudReady": "Cloud ready",
+    "status.mock": "Mock mode",
+    "status.offline": "Offline",
+    "drop.title": "Drop furniture photos here",
+    "drop.meta": "Add several angles of the same item for a more accurate result",
+    "analyze.button": "Confirm & auto-fill",
+    "analyze.running": "Analyzing photos...",
+    "analyze.done": "Analysis complete. Review the auto-filled details, then generate.",
+    "analyze.clear": "Clear photos",
+    "reference.label": "Dimension reference",
+    "sample.button": "Use round table sample",
+    "form.furnitureType": "Furniture type",
+    "opt.auto": "Auto detect",
+    "opt.sideTable": "Side table",
+    "opt.coffeeTable": "Coffee table",
+    "opt.roundTable": "Round dining table",
+    "opt.bookshelf": "Bookshelf",
+    "opt.nightstand": "Nightstand",
+    "form.skill": "Skill level",
+    "opt.beginner": "Beginner",
+    "opt.intermediate": "Intermediate",
+    "opt.advanced": "Advanced",
+    "form.targetSize": "Target size",
+    "ph.targetSize": "24 W x 18 D x 24 H in",
+    "form.budget": "Budget",
+    "ph.budget": "$80 - $150",
+    "form.zip": "Zip code",
+    "form.tools": "Available tools",
+    "tool.drill": "Drill",
+    "tool.saw": "Saw",
+    "tool.sander": "Sander",
+    "tool.clamps": "Clamps",
+    "generate.button": "Generate DIY plan",
+    "generate.running": "Generating...",
+    "agent.runtime": "Agent runtime",
+    "agent.heading": "Planning agent",
+    "agent.idle": "Idle",
+    "agent.intro": "Drop a photo and the agent will observe, decompose, route, verify, and render a build manual.",
+    "agent.imageLoaded": "Photo loaded. Click Confirm & auto-fill, or generate directly.",
+    "empty.ready": "Ready",
+    "empty.heading": "Image in. Build plan out.",
+    "empty.vision": "vision",
+    "empty.routing": "routing",
+    "empty.verifier": "verifier",
+    "empty.materials": "materials",
+    "loading.text": "Running multimodal planning workflow...",
+    "score.buildability": "Buildability",
+    "section.research": "Research Evaluation",
+    "manual.eyebrow": "Real parts from your photo",
+    "section.manual": "Instruction Manual",
+    "section.materials": "Materials",
+    "section.steps": "Build Steps",
+    "section.verifier": "Verifier",
+    "section.routing": "Routing Policy",
+    "section.trace": "Execution Trace",
+    "section.json": "Structured Output"
+  },
+  zh: {
+    "nav.plan": "方案",
+    "nav.evaluate": "评估",
+    "brand.eyebrow": "多模态路由工作室",
+    "status.checking": "检测中",
+    "status.localReady": "本地 MLX 就绪",
+    "status.cloudReady": "云端就绪",
+    "status.mock": "模拟模式",
+    "status.offline": "离线",
+    "drop.title": "把家具照片拖到这里",
+    "drop.meta": "上传同一件物品的多个角度，结果更精确",
+    "analyze.button": "确认并自动填写",
+    "analyze.running": "正在分析照片...",
+    "analyze.done": "分析完成。检查自动填写的信息后再生成。",
+    "analyze.clear": "清除照片",
+    "reference.label": "尺寸参考",
+    "sample.button": "使用圆桌示例",
+    "form.furnitureType": "家具类型",
+    "opt.auto": "自动识别",
+    "opt.sideTable": "边桌",
+    "opt.coffeeTable": "茶几",
+    "opt.roundTable": "圆形餐桌",
+    "opt.bookshelf": "书架",
+    "opt.nightstand": "床头柜",
+    "form.skill": "技能水平",
+    "opt.beginner": "初学者",
+    "opt.intermediate": "中级",
+    "opt.advanced": "高级",
+    "form.targetSize": "目标尺寸",
+    "ph.targetSize": "宽24 x 深18 x 高24 英寸",
+    "form.budget": "预算",
+    "ph.budget": "$80 - $150",
+    "form.zip": "邮编",
+    "form.tools": "可用工具",
+    "tool.drill": "电钻",
+    "tool.saw": "锯",
+    "tool.sander": "砂磨机",
+    "tool.clamps": "夹具",
+    "generate.button": "生成 DIY 方案",
+    "generate.running": "生成中...",
+    "agent.runtime": "智能体运行时",
+    "agent.heading": "规划智能体",
+    "agent.idle": "空闲",
+    "agent.intro": "上传照片后，智能体会观察、拆解、路由、校验，并渲染装配说明书。",
+    "agent.imageLoaded": "照片已载入。点击「确认并自动填写」，或直接生成。",
+    "empty.ready": "就绪",
+    "empty.heading": "图片进，方案出。",
+    "empty.vision": "视觉",
+    "empty.routing": "路由",
+    "empty.verifier": "校验",
+    "empty.materials": "材料",
+    "loading.text": "正在运行多模态规划流程...",
+    "score.buildability": "可制作性",
+    "section.research": "研究评估",
+    "manual.eyebrow": "来自你照片的真实部件",
+    "section.manual": "装配说明书",
+    "section.materials": "材料清单",
+    "section.steps": "制作步骤",
+    "section.verifier": "校验器",
+    "section.routing": "路由策略",
+    "section.trace": "执行轨迹",
+    "section.json": "结构化输出"
+  }
+};
+
+function t(key) {
+  return (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
+}
+
+function applyLanguage(lang) {
+  currentLang = I18N[lang] ? lang : "en";
+  localStorage.setItem("diyplan_lang", currentLang);
+  document.documentElement.lang = currentLang === "zh" ? "zh-CN" : "en";
+
+  document.querySelectorAll("[data-i18n]").forEach((node) => {
+    const value = t(node.getAttribute("data-i18n"));
+    if (value) node.textContent = value;
+  });
+  document.querySelectorAll("[data-i18n-ph]").forEach((node) => {
+    const value = t(node.getAttribute("data-i18n-ph"));
+    if (value) node.setAttribute("placeholder", value);
+  });
+
+  document.querySelectorAll(".lang-switch button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.lang === currentLang);
+  });
+
+  document.querySelectorAll("select").forEach((select) => enhanceSelect(select));
+
+  const generateBtn = document.querySelector("#generate-button");
+  if (generateBtn && !generateBtn.disabled) generateBtn.textContent = t("generate.button");
+
+  checkHealth();
+  if (lastResultBase) applyContentLanguage();
+}
+
+function wireLanguageSwitch() {
+  document.querySelectorAll(".lang-switch button").forEach((button) => {
+    button.addEventListener("click", () => applyLanguage(button.dataset.lang));
+  });
+}
+
+function applyContentLanguage() {
+  if (!lastResultBase) return;
+  const resolved = translationCache.get(currentLang) || lastResultBase;
+  renderResolved(resolved);
+  if (currentLang !== "en" && !translationCache.has(currentLang)) {
+    translateResult(currentLang);
+  }
+}
+
+async function translateResult(lang) {
+  const { clone, strings, setters } = gatherTranslatable(lastResultBase);
+  if (!strings.length) {
+    translationCache.set(lang, lastResultBase);
+    return;
+  }
+  try {
+    const response = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ texts: strings, targetLang: lang })
+    });
+    const data = await response.json();
+    const translations = data.translations || strings;
+    setters.forEach((set, index) => set(translations[index] ?? strings[index]));
+    translationCache.set(lang, clone);
+    if (currentLang === lang) renderResolved(clone);
+  } catch {
+    translationCache.set(lang, lastResultBase);
+  }
+}
+
+function gatherTranslatable(result) {
+  const clone = structuredClone(result);
+  const strings = [];
+  const setters = [];
+  const add = (obj, key) => {
+    const value = obj?.[key];
+    if (typeof value === "string" && value.trim()) {
+      strings.push(value);
+      setters.push((next) => {
+        obj[key] = next;
+      });
+    }
+  };
+  const addArr = (arr) => {
+    if (!Array.isArray(arr)) return;
+    arr.forEach((value, index) => {
+      if (typeof value === "string" && value.trim()) {
+        strings.push(value);
+        setters.push((next) => {
+          arr[index] = next;
+        });
+      }
+    });
+  };
+
+  const plan = clone.plan || {};
+  if (plan.project) ["title", "summary", "inspired_by_style", "recommended_scope"].forEach((k) => add(plan.project, k));
+  addArr(plan.assumptions);
+  if (plan.dimensions) add(plan.dimensions, "notes");
+  if (plan.estimated_total_cost_usd) add(plan.estimated_total_cost_usd, "notes");
+  (plan.materials || []).forEach((material) => {
+    ["name", "notes", "unit", "category"].forEach((k) => add(material, k));
+    addArr(material.alternatives);
+  });
+  addArr(plan.tools);
+  (plan.steps || []).forEach((step) => ["title", "detail", "safety_notes"].forEach((k) => add(step, k)));
+  addArr(plan.safety_checks);
+  if (plan.evaluation) addArr(plan.evaluation.verifier_notes);
+  const im = plan.instruction_model;
+  if (im) {
+    (im.parts || []).forEach((part) => add(part, "label"));
+    (im.frames || []).forEach((frame) => {
+      add(frame, "title");
+      add(frame, "caption");
+    });
+  }
+  return { clone, strings, setters };
+}
+
 startLiquidCanvas();
 startCursorGlow();
 enhanceSelects();
+applyLanguage(currentLang);
+wireLanguageSwitch();
 renderAgentConsole("idle");
 animateInitialView();
 checkHealth();
 
 imageInput.addEventListener("change", async (event) => {
-  const file = event.target.files?.[0];
-  if (file) await setImageFromFile(file);
+  const files = Array.from(event.target.files || []);
+  for (const file of files) await setImageFromFile(file);
+  imageInput.value = "";
 });
 
 dropZone.addEventListener("dragover", (event) => {
@@ -107,14 +360,15 @@ document.addEventListener("paste", async (event) => {
 });
 
 clearImageButton.addEventListener("click", () => {
-  imageDataUrl = "";
+  imageDataUrls = [];
   imageInput.value = "";
-  previewWrap.hidden = true;
+  renderThumbs();
   referenceWrap.hidden = true;
   renderAgentConsole("idle");
 });
 
 sampleButton.addEventListener("click", async () => {
+  imageDataUrls = [];
   await setImageFromUrl("/examples/round-table-photo.png", "Round table sample", "/examples/round-table-dimensions.png");
   document.querySelector("#furniture-type").value = "round dining table";
   document.querySelector("#target-size").value = "57 in diameter x 29.5 H in";
@@ -123,33 +377,99 @@ sampleButton.addEventListener("click", async () => {
   enhanceSelect(document.querySelector("#furniture-type"));
 });
 
+analyzeButton.addEventListener("click", async () => {
+  if (!imageDataUrls.length) return;
+  analyzeButton.disabled = true;
+  analyzeButton.textContent = t("analyze.running");
+  try {
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ imageDataUrls })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Analysis failed.");
+    applySuggestions(result.suggestions);
+    renderAgentConsole("image", { message: t("analyze.done") });
+  } catch (error) {
+    showError(error.message);
+  } finally {
+    analyzeButton.disabled = false;
+    analyzeButton.textContent = t("analyze.button");
+  }
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   await generatePlan();
 });
 
+function applySuggestions(suggestions) {
+  if (!suggestions) return;
+  const typeSelect = document.querySelector("#furniture-type");
+  if (suggestions.furnitureType) {
+    typeSelect.value = suggestions.furnitureType;
+    enhanceSelect(typeSelect);
+  }
+  const skillSelect = document.querySelector("#skill-level");
+  if (suggestions.skillLevel) {
+    skillSelect.value = suggestions.skillLevel;
+    enhanceSelect(skillSelect);
+  }
+  if (suggestions.targetSize) document.querySelector("#target-size").value = suggestions.targetSize;
+  if (suggestions.budget) document.querySelector("#budget").value = suggestions.budget;
+  if (Array.isArray(suggestions.tools)) {
+    document.querySelectorAll('input[name="tools"]').forEach((input) => {
+      input.checked = suggestions.tools.includes(input.value);
+    });
+  }
+}
+
+function renderThumbs() {
+  if (!imageDataUrls.length) {
+    thumbs.hidden = true;
+    thumbs.innerHTML = "";
+    previewActions.hidden = true;
+    return;
+  }
+  thumbs.hidden = false;
+  previewActions.hidden = false;
+  thumbs.innerHTML = imageDataUrls
+    .map(
+      (url, index) => `
+        <div class="thumb">
+          <img src="${url}" alt="Uploaded furniture ${index + 1}" />
+          <button type="button" class="thumb-remove" data-index="${index}" aria-label="Remove photo">&times;</button>
+        </div>`
+    )
+    .join("");
+  thumbs.querySelectorAll(".thumb-remove").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.index);
+      imageDataUrls.splice(index, 1);
+      renderThumbs();
+      if (!imageDataUrls.length) renderAgentConsole("idle");
+    });
+  });
+}
+
 async function checkHealth() {
   try {
     const response = await fetch("/api/health");
     const health = await response.json();
-    statusPill.textContent = health.cloudModelConfigured ? "Cloud ready" : "Mock mode";
-    statusPill.classList.toggle("cloud", health.cloudModelConfigured);
-    hydrateRoutingStrategies(health.routingStrategies || []);
+    const local = health.localBackend || {};
+    if (local.available) {
+      statusPill.textContent = local.mock ? "Local mock" : t("status.localReady");
+      statusPill.classList.add("cloud");
+    } else if (health.cloudModelConfigured) {
+      statusPill.textContent = t("status.cloudReady");
+      statusPill.classList.add("cloud");
+    } else {
+      statusPill.textContent = t("status.mock");
+    }
   } catch {
-    statusPill.textContent = "Offline";
+    statusPill.textContent = t("status.offline");
   }
-}
-
-function hydrateRoutingStrategies(strategies) {
-  if (!strategies.length) return;
-  const select = document.querySelector("#routing-strategy");
-  select.innerHTML = strategies
-    .map(
-      (strategy) =>
-        `<option value="${escapeHtml(strategy.id)}">${escapeHtml(strategy.label)}</option>`
-    )
-    .join("");
-  enhanceSelect(select);
 }
 
 async function setImageFromFile(file, sourceLabel = "Uploaded image") {
@@ -189,9 +509,10 @@ async function setImageFromUrl(url, sourceLabel = "Dragged image URL", reference
 }
 
 function assignImageDataUrl(dataUrl, sourceLabel, referenceUrl = "") {
-  imageDataUrl = dataUrl;
-  previewImage.src = dataUrl;
-  previewWrap.hidden = false;
+  if (!dataUrl || imageDataUrls.includes(dataUrl)) return;
+  imageDataUrls.push(dataUrl);
+  if (imageDataUrls.length > 6) imageDataUrls = imageDataUrls.slice(-6);
+  renderThumbs();
   if (referenceUrl) {
     referenceImage.src = referenceUrl;
     referenceWrap.hidden = false;
@@ -199,7 +520,7 @@ function assignImageDataUrl(dataUrl, sourceLabel, referenceUrl = "") {
     referenceWrap.hidden = true;
     referenceImage.removeAttribute("src");
   }
-  renderAgentConsole("image", { message: `${sourceLabel} loaded. Agent is ready to inspect the furniture.` });
+  renderAgentConsole("image", { message: t("agent.imageLoaded") });
 }
 
 function readFileAsDataUrl(file) {
@@ -301,13 +622,13 @@ async function generatePlan() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        imageDataUrl,
+        imageDataUrls,
         furnitureType: document.querySelector("#furniture-type").value,
         skillLevel: document.querySelector("#skill-level").value,
         targetSize: document.querySelector("#target-size").value,
         budget: document.querySelector("#budget").value,
         zipcode: document.querySelector("#zipcode").value,
-        routingStrategy: document.querySelector("#routing-strategy").value,
+        routingStrategy: "local_mlx",
         tools: Array.from(document.querySelectorAll('input[name="tools"]:checked')).map((input) => input.value)
       })
     });
@@ -326,7 +647,7 @@ async function generatePlan() {
 
 function setBusy(isBusy) {
   generateButton.disabled = isBusy;
-  generateButton.textContent = isBusy ? "Generating..." : "Generate DIY plan";
+  generateButton.textContent = isBusy ? t("generate.running") : t("generate.button");
   loadingState.hidden = !isBusy;
   emptyState.hidden = true;
   if (isBusy) {
@@ -335,6 +656,13 @@ function setBusy(isBusy) {
 }
 
 function renderPlan(result) {
+  lastResultBase = result;
+  translationCache.clear();
+  translationCache.set("en", result);
+  applyContentLanguage();
+}
+
+function renderResolved(result) {
   const { plan } = result;
   emptyState.hidden = true;
   errorState.hidden = true;

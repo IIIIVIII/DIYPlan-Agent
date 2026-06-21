@@ -18,9 +18,12 @@
           <small>agent lab</small>
         </div>
         <nav class="topnav" aria-label="Workflow">
-          <a href="#plan-form">Plan</a>
-          <a href="#routing-list">Route</a>
-          <a href="#research-score-grid">Evaluate</a>
+          <a href="#plan-form" data-i18n="nav.plan">Plan</a>
+          <a href="#research-score-grid" data-i18n="nav.evaluate">Evaluate</a>
+          <div class="lang-switch" role="group" aria-label="Language">
+            <button type="button" data-lang="en">EN</button>
+            <button type="button" data-lang="zh">中文</button>
+          </div>
         </nav>
       </header>
 
@@ -28,86 +31,80 @@
         <aside class="input-panel" aria-label="Planning controls">
           <div class="brand-row">
             <div>
-              <p class="eyebrow">Multimodal routing studio</p>
+              <p class="eyebrow" data-i18n="brand.eyebrow">Multimodal routing studio</p>
               <h1>DIYPlan Agent</h1>
             </div>
-            <span id="status-pill" class="status-pill">Checking</span>
+            <span id="status-pill" class="status-pill" data-i18n="status.checking">Checking</span>
           </div>
 
           <label class="drop-zone" id="drop-zone">
-            <input id="image-input" type="file" accept="image/*" />
-            <span class="drop-title">Drop furniture image here</span>
-            <span class="drop-meta">Files, browser images, image URLs, or pasted screenshots</span>
+            <input id="image-input" type="file" accept="image/*" multiple />
+            <span class="drop-title" data-i18n="drop.title">Drop furniture photos here</span>
+            <span class="drop-meta" data-i18n="drop.meta">Add several angles of the same item for a more accurate result</span>
           </label>
 
-          <div class="preview-wrap" id="preview-wrap" hidden>
-            <img id="preview-image" alt="Uploaded furniture preview" />
-            <button class="text-button" id="clear-image" type="button">Clear image</button>
+          <div class="thumbs" id="thumbs" hidden></div>
+
+          <div class="preview-actions" id="preview-actions" hidden>
+            <button class="primary-action analyze-action" id="analyze-button" type="button" data-i18n="analyze.button">
+              Confirm &amp; auto-fill
+            </button>
+            <button class="text-button" id="clear-image" type="button" data-i18n="analyze.clear">Clear photos</button>
           </div>
 
           <div class="reference-wrap" id="reference-wrap" hidden>
-            <span>Dimension reference</span>
-            <img id="reference-image" alt="Round table dimension reference" />
+            <span data-i18n="reference.label">Dimension reference</span>
+            <img id="reference-image" alt="Dimension reference" />
           </div>
 
-          <button class="secondary-action" id="sample-button" type="button">Use round table sample</button>
+          <button class="secondary-action" id="sample-button" type="button" data-i18n="sample.button">Use round table sample</button>
 
           <form id="plan-form" class="control-grid">
             <label>
-              <span>Furniture type</span>
+              <span data-i18n="form.furnitureType">Furniture type</span>
               <select id="furniture-type">
-                <option value="auto">Auto detect</option>
-                <option value="side table">Side table</option>
-                <option value="coffee table">Coffee table</option>
-                <option value="round dining table">Round dining table</option>
-                <option value="bookshelf">Bookshelf</option>
-                <option value="nightstand">Nightstand</option>
+                <option value="auto" data-i18n="opt.auto">Auto detect</option>
+                <option value="side table" data-i18n="opt.sideTable">Side table</option>
+                <option value="coffee table" data-i18n="opt.coffeeTable">Coffee table</option>
+                <option value="round dining table" data-i18n="opt.roundTable">Round dining table</option>
+                <option value="bookshelf" data-i18n="opt.bookshelf">Bookshelf</option>
+                <option value="nightstand" data-i18n="opt.nightstand">Nightstand</option>
               </select>
             </label>
 
             <label>
-              <span>Skill level</span>
+              <span data-i18n="form.skill">Skill level</span>
               <select id="skill-level">
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
+                <option value="beginner" data-i18n="opt.beginner">Beginner</option>
+                <option value="intermediate" data-i18n="opt.intermediate">Intermediate</option>
+                <option value="advanced" data-i18n="opt.advanced">Advanced</option>
               </select>
             </label>
 
             <label>
-              <span>Routing strategy</span>
-              <select id="routing-strategy">
-                <option value="cost_optimized">Cost optimized</option>
-                <option value="quality_first">Quality first</option>
-                <option value="cascade">Cascade</option>
-                <option value="local_first">Local first</option>
-              </select>
+              <span data-i18n="form.targetSize">Target size</span>
+              <input id="target-size" type="text" data-i18n-ph="ph.targetSize" placeholder="24 W x 18 D x 24 H in" />
             </label>
 
             <label>
-              <span>Target size</span>
-              <input id="target-size" type="text" placeholder="24 W x 18 D x 24 H in" />
+              <span data-i18n="form.budget">Budget</span>
+              <input id="budget" type="text" data-i18n-ph="ph.budget" placeholder="$80 - $150" />
             </label>
 
             <label>
-              <span>Budget</span>
-              <input id="budget" type="text" placeholder="$80 - $150" />
-            </label>
-
-            <label>
-              <span>Zip code</span>
+              <span data-i18n="form.zip">Zip code</span>
               <input id="zipcode" type="text" inputmode="numeric" placeholder="90024" />
             </label>
 
             <fieldset class="tools-field">
-              <legend>Available tools</legend>
-              <label><input type="checkbox" name="tools" value="drill" checked /> Drill</label>
-              <label><input type="checkbox" name="tools" value="saw" checked /> Saw</label>
-              <label><input type="checkbox" name="tools" value="sander" /> Sander</label>
-              <label><input type="checkbox" name="tools" value="clamps" /> Clamps</label>
+              <legend data-i18n="form.tools">Available tools</legend>
+              <label><input type="checkbox" name="tools" value="drill" checked /> <span data-i18n="tool.drill">Drill</span></label>
+              <label><input type="checkbox" name="tools" value="saw" checked /> <span data-i18n="tool.saw">Saw</span></label>
+              <label><input type="checkbox" name="tools" value="sander" /> <span data-i18n="tool.sander">Sander</span></label>
+              <label><input type="checkbox" name="tools" value="clamps" /> <span data-i18n="tool.clamps">Clamps</span></label>
             </fieldset>
 
-            <button class="primary-action" id="generate-button" type="submit">Generate DIY plan</button>
+            <button class="primary-action" id="generate-button" type="submit" data-i18n="generate.button">Generate DIY plan</button>
           </form>
         </aside>
 
@@ -115,29 +112,29 @@
           <section class="agent-console" id="agent-console" aria-label="Agent workflow console">
             <div class="agent-console-head">
               <div>
-                <p class="eyebrow">Agent runtime</p>
-                <h3>Planning agent</h3>
+                <p class="eyebrow" data-i18n="agent.runtime">Agent runtime</p>
+                <h3 data-i18n="agent.heading">Planning agent</h3>
               </div>
-              <span id="agent-state-pill">Idle</span>
+              <span id="agent-state-pill" data-i18n="agent.idle">Idle</span>
             </div>
-            <p id="agent-message">Drop an image and the agent will observe, decompose, route, verify, and render a build manual.</p>
+            <p id="agent-message" data-i18n="agent.intro">Drop a photo and the agent will observe, decompose, route, verify, and render a build manual.</p>
             <div class="agent-steps" id="agent-steps"></div>
           </section>
 
           <div class="empty-state" id="empty-state">
-            <p class="eyebrow">Ready</p>
-            <h2>Image in. Build plan out.</h2>
+            <p class="eyebrow" data-i18n="empty.ready">Ready</p>
+            <h2 data-i18n="empty.heading">Image in. Build plan out.</h2>
             <div class="empty-grid" aria-hidden="true">
-              <span>vision</span>
-              <span>routing</span>
-              <span>verifier</span>
-              <span>materials</span>
+              <span data-i18n="empty.vision">vision</span>
+              <span data-i18n="empty.routing">routing</span>
+              <span data-i18n="empty.verifier">verifier</span>
+              <span data-i18n="empty.materials">materials</span>
             </div>
           </div>
 
           <div id="loading-state" class="loading-state" hidden>
             <div class="progress-bar"><span></span></div>
-            <p>Running multimodal planning workflow...</p>
+            <p data-i18n="loading.text">Running multimodal planning workflow...</p>
           </div>
 
           <div id="error-state" class="error-state" hidden></div>
@@ -151,14 +148,14 @@
               </div>
               <div class="score-box">
                 <span id="buildability-score">0</span>
-                <small>Buildability</small>
+                <small data-i18n="score.buildability">Buildability</small>
               </div>
             </header>
 
             <section class="metrics-grid" id="metrics-grid"></section>
 
             <section class="content-band">
-              <h3>Research Evaluation</h3>
+              <h3 data-i18n="section.research">Research Evaluation</h3>
               <div class="score-grid" id="research-score-grid"></div>
               <ul class="compact-list" id="research-issues-list"></ul>
             </section>
@@ -166,10 +163,10 @@
             <section class="content-band manual-band">
               <div class="section-title-row">
                 <div>
-                  <p class="eyebrow">2D part decomposition</p>
-                  <h3>Instruction Manual</h3>
+                  <p class="eyebrow" data-i18n="manual.eyebrow">Real parts from your photo</p>
+                  <h3 data-i18n="section.manual">Instruction Manual</h3>
                 </div>
-                <span id="instruction-mode" class="manual-badge">Vector MVP</span>
+                <span id="instruction-mode" class="manual-badge">Photo cutout</span>
               </div>
               <p class="manual-note" id="instruction-note"></p>
               <div class="manual-layout">
@@ -179,33 +176,33 @@
             </section>
 
             <section class="content-band">
-              <h3>Materials</h3>
+              <h3 data-i18n="section.materials">Materials</h3>
               <div class="materials-bento" id="materials-bento"></div>
             </section>
 
             <section class="content-band">
-              <h3>Build Steps</h3>
+              <h3 data-i18n="section.steps">Build Steps</h3>
               <ol class="steps-list" id="steps-list"></ol>
             </section>
 
             <section class="two-column-band">
               <div>
-                <h3>Verifier</h3>
+                <h3 data-i18n="section.verifier">Verifier</h3>
                 <ul class="compact-list" id="verifier-list"></ul>
               </div>
               <div>
-                <h3>Routing Policy</h3>
+                <h3 data-i18n="section.routing">Routing Policy</h3>
                 <ul class="compact-list" id="routing-list"></ul>
               </div>
             </section>
 
             <section class="content-band">
-              <h3>Execution Trace</h3>
+              <h3 data-i18n="section.trace">Execution Trace</h3>
               <div class="trace-list" id="trace-list"></div>
             </section>
 
             <section class="content-band">
-              <h3>Structured Output</h3>
+              <h3 data-i18n="section.json">Structured Output</h3>
               <pre id="json-output"></pre>
             </section>
           </article>

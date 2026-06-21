@@ -21,30 +21,46 @@ _JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 def generate(payload: dict) -> dict:
     preferences = payload.get("preferences", {}) or {}
-    image_data_url = payload.get("imageDataUrl") or ""
+    image_data_urls = payload.get("imageDataUrls") or []
+    if not image_data_urls and payload.get("imageDataUrl"):
+        image_data_urls = [payload["imageDataUrl"]]
     started = time.perf_counter()
     stages: List[dict] = []
 
     if config.MOCK_MODE:
         return _mock_response(preferences, stages, started)
 
-    return _live_response(preferences, image_data_url, stages, started)
+    return _live_response(preferences, image_data_urls, stages, started)
 
 
 # ---------------------------------------------------------------------------
 # Live (model-backed) path
 # ---------------------------------------------------------------------------
-def _live_response(preferences: dict, image_data_url: str, stages: List[dict], started: float) -> dict:
+def _live_response(preferences: dict, image_data_urls, stages: List[dict], started: float) -> dict:
     from . import models
     from .rag.store import get_store
     from . import prompts
 
-    image_path = models.data_url_to_tempfile(image_data_url) if image_data_url else None
+    image_paths = [
+        p
+        for p in (models.data_url_to_tempfile(u) for u in image_data_urls)
+        if p
+    ]
+    # The first/clearest photo is used for the 1:1 part cutouts; all photos
+    # feed perception so more angles give more detail.
+    image_path = image_paths[0] if image_paths else None
 
-    # Stage 1: perception (VLM)
+    # Stage 1: perception (VLM, multi-image when several photos are uploaded)
     t0 = time.perf_counter()
-    perception = _run_perception(models, prompts, preferences, image_path)
-    stages.append(_stage("image-understanding", config.VLM_MODEL, "Vision-language model parsed the reference image.", t0))
+    perception = _run_perception(models, prompts, preferences, image_paths)
+    stages.append(
+        _stage(
+            "image-understanding",
+            config.VLM_MODEL,
+            f"Vision-language model parsed {len(image_paths) or 0} reference photo(s).",
+            t0,
+        )
+    )
 
     # Stage 2: retrieval (embeddings + vector store)
     t0 = time.perf_counter()
@@ -58,20 +74,23 @@ def _live_response(preferences: dict, image_data_url: str, stages: List[dict], s
     plan, plan_model = _run_planning(models, plan_prompt, image_path)
     stages.append(_stage("plan-generation", plan_model, "Structured plan generated and schema-validated.", t0))
 
-    # Stage 4: instruction manual. We keep the original IKEA-style template
-    # layout (deterministic, readable) and only swap each synthetic shape for
-    # the *real part cut 1:1 out of the photo* via GroundingDINO + SAM2.
+    # Stage 4: segment the real parts 1:1 from the photo. We do NOT build the
+    # manual layout here -- the Node side owns the IKEA-style template the user
+    # asked us to keep. We just return cutouts grouped by role so Node can drop
+    # each real part into the matching slot of its template.
     t0 = time.perf_counter()
     spec = _fallback_instruction_spec(perception, preferences)
-    instruction_model = build_instruction_model(spec)
-    n_cut = _apply_real_cutouts(instruction_model, image_path)
+    seg_template = build_instruction_model(spec)
+    cut_map, tint = _compute_cutouts(seg_template, image_path)
+    part_cutouts = _group_cutouts_by_role(seg_template, cut_map)
+    n_cut = len(cut_map)
     stages.append(
         _stage(
-            "instruction-manual",
+            "part-segmentation",
             f"{config.GROUNDING_MODEL.split('/')[-1]}+sam2",
-            f"Template manual with {n_cut} real parts cut 1:1 from the photo."
+            f"Cut {n_cut} real parts 1:1 from the photo."
             if n_cut
-            else "Template manual (segmentation found no clean parts; using shapes).",
+            else "No clean parts segmented; manual uses simplified shapes.",
             t0,
         )
     )
@@ -81,7 +100,8 @@ def _live_response(preferences: dict, image_data_url: str, stages: List[dict], s
         "plan": plan.model_dump(),
         "perception": perception,
         "retrieval": retrieved,
-        "instruction_model": instruction_model,
+        "part_cutouts": part_cutouts,
+        "dominant_color": tint,
         "stages": stages,
         "metrics": {
             "model": config.model_label(),
@@ -91,51 +111,46 @@ def _live_response(preferences: dict, image_data_url: str, stages: List[dict], s
     }
 
 
-def _apply_real_cutouts(instruction_model: dict, image_path: Optional[str]) -> int:
-    """Replace synthetic part shapes with real parts cut out of the photo.
-
-    Mutates `instruction_model["parts"]` in place: parts we can segment get an
-    `image` (transparent PNG data URL) drawn by the renderer; parts we cannot
-    segment keep their shape but are tinted with the photo's dominant color so
-    the whole manual reads in the real object's palette. Returns the cut count.
-    """
+def _compute_cutouts(seg_template: dict, image_path: Optional[str]):
+    """Return (id->cutout map, dominant_color) for the photo, or ({}, None)."""
     if not image_path:
-        return 0
+        return {}, None
     try:
         from . import segmentation
     except Exception as exc:  # torch/transformers not available
         print(f"[pipeline] segmentation unavailable: {exc}")
-        return 0
+        return {}, None
 
-    parts = instruction_model.get("parts", [])
+    parts = seg_template.get("parts", [])
     spec_parts = [{"id": p["id"], "role": p.get("role", "")} for p in parts]
-    cutouts = segmentation.cutouts_for_parts(image_path, spec_parts)
+    cut_map = segmentation.cutouts_for_parts(image_path, spec_parts)
     tint = segmentation.dominant_color(image_path)
+    return cut_map, tint
 
-    count = 0
-    for part in parts:
-        cut = cutouts.get(part["id"])
-        if cut:
-            part["image"] = cut["image"]
-            part["img_w"] = cut["img_w"]
-            part["img_h"] = cut["img_h"]
-            part["has_cutout"] = True
-            count += 1
-        elif tint:
-            part["color"] = tint
-    if count:
-        instruction_model["source"] = "photo_cutout"
-        instruction_model["source_note"] = (
-            "IKEA-style template layout; each part shown is segmented 1:1 from "
-            "the uploaded photo (GroundingDINO + SAM2). Parts not visible in the "
-            "photo keep a simplified shape tinted to the object's color."
+
+def _group_cutouts_by_role(seg_template: dict, cut_map: dict) -> dict:
+    """Group cutouts by part role, in the spatial order they were assigned.
+
+    Node maps these role buckets onto its own IKEA-style template slots, so the
+    real parts land in the right place regardless of differing part ids.
+    """
+    groups: dict = {}
+    for part in seg_template.get("parts", []):
+        cut = cut_map.get(part["id"])
+        if not cut:
+            continue
+        role = part.get("role", "")
+        groups.setdefault(role, []).append(
+            {"image": cut["image"], "img_w": cut["img_w"], "img_h": cut["img_h"]}
         )
-    return count
+    return groups
 
 
-def _run_perception(models, prompts, preferences: dict, image_path: Optional[str]) -> dict:
+def _run_perception(models, prompts, preferences: dict, image_paths) -> dict:
+    if isinstance(image_paths, str) or image_paths is None:
+        image_paths = [image_paths] if image_paths else []
     prompt = prompts.perception_prompt(preferences)
-    text = models.vlm_generate(prompt, image_path)
+    text = models.vlm_generate(prompt, image_paths if image_paths else None)
     data = _parse_json(text)
     if data is not None:
         try:
@@ -150,8 +165,42 @@ def _run_perception(models, prompts, preferences: dict, image_path: Optional[str
         style="simple modern wood furniture",
         approx_dimensions_note="dimensions not confidently read from image",
         risk_level="low",
-        confidence=0.4 if image_path else 0.2,
+        confidence=0.4 if image_paths else 0.2,
     ).model_dump()
+
+
+def translate_texts(texts: List[str], target_lang: str) -> List[str]:
+    """Translate a list of UI/plan strings into the target language.
+
+    Used by the /translate endpoint so the user can switch the language of an
+    already-generated plan. Returns a list aligned with the input; on any
+    failure it returns the inputs unchanged so the UI never breaks.
+    """
+    texts = [str(t) for t in (texts or [])]
+    if not texts:
+        return []
+    lang_name = {"zh": "Simplified Chinese", "en": "English"}.get(
+        target_lang, target_lang or "English"
+    )
+    if config.MOCK_MODE:
+        return texts
+
+    from . import models, prompts
+
+    try:
+        prompt = prompts.translation_prompt(texts, lang_name)
+        out = models.vlm_generate(prompt, None)
+        data = _parse_json(out)
+        items = None
+        if isinstance(data, dict):
+            items = data.get("translations") or data.get("items")
+        elif isinstance(data, list):
+            items = data
+        if isinstance(items, list) and len(items) == len(texts):
+            return [str(x) for x in items]
+    except Exception as exc:
+        print(f"[pipeline] translation failed: {exc}")
+    return texts
 
 
 def _run_planning(models, plan_prompt: str, image_path: Optional[str]) -> Tuple[Plan, str]:

@@ -23,17 +23,24 @@ app = FastAPI(title="DIYPlan Agent ML Backend", version="0.1.0")
 
 class PlanRequest(BaseModel):
     imageDataUrl: str | None = None
+    imageDataUrls: list[str] | None = None
     preferences: dict = {}
 
 
 class UnderstandRequest(BaseModel):
     imageDataUrl: str | None = None
+    imageDataUrls: list[str] | None = None
     preferences: dict = {}
 
 
 class RetrieveRequest(BaseModel):
     query: str
     top_k: int | None = None
+
+
+class TranslateRequest(BaseModel):
+    texts: list[str] = []
+    target_lang: str = "en"
 
 
 @app.get("/health")
@@ -48,28 +55,43 @@ def health() -> dict:
     }
 
 
+def _image_urls(req) -> list[str]:
+    urls = list(req.imageDataUrls or [])
+    if not urls and req.imageDataUrl:
+        urls = [req.imageDataUrl]
+    return urls
+
+
 @app.post("/plan")
 def plan(req: PlanRequest) -> dict:
     return pipeline.generate(
-        {"imageDataUrl": req.imageDataUrl, "preferences": req.preferences}
+        {"imageDataUrls": _image_urls(req), "preferences": req.preferences}
     )
 
 
 @app.post("/understand")
 def understand(req: UnderstandRequest) -> dict:
+    urls = _image_urls(req)
     if config.MOCK_MODE:
         result = pipeline.generate(
-            {"imageDataUrl": req.imageDataUrl, "preferences": req.preferences}
+            {"imageDataUrls": urls, "preferences": req.preferences}
         )
         return {"perception": result["perception"], "stages": result["stages"][:1]}
 
     from . import models, prompts
 
-    image_path = (
-        models.data_url_to_tempfile(req.imageDataUrl) if req.imageDataUrl else None
+    image_paths = [
+        p for p in (models.data_url_to_tempfile(u) for u in urls) if p
+    ]
+    perception = pipeline._run_perception(
+        models, prompts, req.preferences, image_paths
     )
-    perception = pipeline._run_perception(models, prompts, req.preferences, image_path)
     return {"perception": perception}
+
+
+@app.post("/translate")
+def translate(req: TranslateRequest) -> dict:
+    return {"translations": pipeline.translate_texts(req.texts, req.target_lang)}
 
 
 @app.post("/retrieve")

@@ -3,14 +3,14 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { generatePlan } from "./src/planner.js";
+import { generatePlan, analyzeImage } from "./src/planner.js";
 import { listRoutingStrategies } from "./src/routing.js";
-import { checkLocalBackend } from "./src/localBackend.js";
+import { checkLocalBackend, callLocalTranslate } from "./src/localBackend.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, "public");
-const maxBodyBytes = 18 * 1024 * 1024;
+const maxBodyBytes = 48 * 1024 * 1024;
 
 await loadDotEnv();
 
@@ -48,6 +48,23 @@ const server = http.createServer(async (req, res) => {
       const payload = await readJsonBody(req);
       const plan = await generatePlan(payload);
       return sendJson(res, 200, plan);
+    }
+
+    if (req.method === "POST" && req.url === "/api/analyze") {
+      const payload = await readJsonBody(req);
+      const analysis = await analyzeImage(payload);
+      return sendJson(res, 200, analysis);
+    }
+
+    if (req.method === "POST" && req.url === "/api/translate") {
+      const payload = await readJsonBody(req);
+      const texts = Array.isArray(payload.texts) ? payload.texts.map((t) => String(t)) : [];
+      try {
+        const result = await callLocalTranslate({ texts, targetLang: payload.targetLang });
+        return sendJson(res, 200, result);
+      } catch {
+        return sendJson(res, 200, { translations: texts });
+      }
     }
 
     if (req.method === "POST" && req.url === "/api/import-image") {
