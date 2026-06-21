@@ -9,7 +9,10 @@ function timeoutMs() {
 }
 
 export function localBackendConfigured() {
-  return Boolean(process.env.ML_BACKEND_URL) || process.env.ML_BACKEND_ENABLED === "1";
+  // ML_BACKEND_URL only configures *where* the backend is. Set
+  // ML_BACKEND_ENABLED=1 to force local-first for every image request,
+  // regardless of the selected routing strategy.
+  return process.env.ML_BACKEND_ENABLED === "1";
 }
 
 export async function checkLocalBackend() {

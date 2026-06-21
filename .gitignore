@@ -10,6 +10,7 @@ work/
 # Python local ML backend
 ml/.venv/
 ml/data/
+ml/backend.log
 __pycache__/
 *.pyc
 .huggingface/
