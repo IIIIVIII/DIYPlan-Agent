@@ -71,7 +71,7 @@ def _live_response(preferences: dict, image_data_urls, stages: List[dict], start
     # Stage 3: planning (constrained text LLM if configured, else VLM)
     t0 = time.perf_counter()
     plan_prompt = prompts.planner_prompt(preferences, perception, retrieved)
-    plan, plan_model = _run_planning(models, plan_prompt, image_path)
+    plan, plan_model = _run_planning(models, plan_prompt, image_path, preferences, perception)
     stages.append(_stage("plan-generation", plan_model, "Structured plan generated and schema-validated.", t0))
 
     # Stage 4: segment the real parts 1:1 from the photo. We do NOT build the
@@ -203,7 +203,9 @@ def translate_texts(texts: List[str], target_lang: str) -> List[str]:
     return texts
 
 
-def _run_planning(models, plan_prompt: str, image_path: Optional[str]) -> Tuple[Plan, str]:
+def _run_planning(
+    models, plan_prompt: str, image_path: Optional[str], preferences: dict, perception: dict
+) -> Tuple[Plan, str]:
     use_text_llm = bool(config.PLANNER_MODEL)
     last_error: Optional[str] = None
 
@@ -224,7 +226,14 @@ def _run_planning(models, plan_prompt: str, image_path: Optional[str]) -> Tuple[
         else:
             last_error = "Output was not valid JSON."
 
-    raise ValueError(f"Local planner could not produce schema-valid JSON: {last_error}")
+    # The VLM occasionally emits malformed JSON. Rather than failing the whole
+    # request (which would also throw away the good perception + segmentation),
+    # fall back to a deterministic plan so the manual and cutouts still render.
+    print(f"[pipeline] plan JSON failed, using deterministic fallback: {last_error}")
+    prefs = dict(preferences)
+    if not prefs.get("furnitureType") or prefs.get("furnitureType") == "auto":
+        prefs["furnitureType"] = (perception or {}).get("category") or "side table"
+    return _mock_plan(prefs), "local-mlx-plan-fallback"
 
 
 # ---------------------------------------------------------------------------

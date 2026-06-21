@@ -43,6 +43,19 @@ class TranslateRequest(BaseModel):
     target_lang: str = "en"
 
 
+@app.on_event("startup")
+def _warmup() -> None:
+    """Pre-load the segmentation models so the first /plan is not slow."""
+    if config.MOCK_MODE or not config.SEG_ENABLED:
+        return
+    try:
+        from . import segmentation
+
+        segmentation.warmup()
+    except Exception as exc:  # never block startup on warmup
+        print(f"[startup] segmentation warmup skipped: {exc}")
+
+
 @app.get("/health")
 def health() -> dict:
     return {

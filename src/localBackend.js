@@ -5,7 +5,9 @@ function backendUrl() {
 }
 
 function timeoutMs() {
-  return Number(process.env.ML_BACKEND_TIMEOUT_MS || 120000);
+  // Local VLM perception + planning + GroundingDINO/SAM2 segmentation can take
+  // a few minutes on the first request (model load) on Apple Silicon.
+  return Number(process.env.ML_BACKEND_TIMEOUT_MS || 360000);
 }
 
 export function localBackendConfigured() {
