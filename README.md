@@ -34,10 +34,11 @@ The current MVP supports a narrow low-risk furniture scope:
 
 It intentionally avoids high-risk work such as electrical wiring, ceiling-mounted structures, complex load-bearing furniture, plumbing, gas, or anything that should require a qualified professional.
 
-The demo can run in two modes:
+The demo can run in three modes:
 
 - **Cloud mode**: if `OPENAI_API_KEY` is configured, the server calls the OpenAI Responses API with image input and structured JSON output.
-- **Mock mode**: if no API key is configured, the app returns a deterministic sample plan so the UI, trace, and routing concepts can still be reviewed locally.
+- **Local MLX mode**: if the on-device ML backend in `ml/` is running, the **Local MLX** routing strategy generates the plan with an open-weight vision-language model on Apple Silicon (no per-token API cost). See [`ml/README.md`](ml/README.md).
+- **Mock mode**: if neither is available, the app returns a deterministic sample plan so the UI, trace, and routing concepts can still be reviewed locally.
 
 ## Features
 
@@ -55,7 +56,7 @@ The demo can run in two modes:
 - Home Depot and Lowe's search links
 - Execution trace for each workflow stage
 - Routing policy showing which stages could move to strong cloud models, cheaper models, local models, or deterministic rules
-- Built-in routing strategies: cost optimized, quality first, cascade, and local first
+- Built-in routing strategies: cost optimized, quality first, cascade, local first, and local MLX (on-device Apple Silicon)
 - Offline benchmark harness for comparing quality, latency, cost units, and escalation triggers
 - Raw JSON output for future evaluation and benchmark work
 
@@ -133,6 +134,41 @@ npm run dev
 
 If `OPENAI_API_KEY` is missing, the app still works in mock mode.
 
+## Local MLX Backend (Apple Silicon)
+
+The `ml/` folder is an on-device model layer that runs an open-weight
+vision-language model locally on Apple Silicon via MLX. It performs image
+understanding, RAG retrieval over a small DIY knowledge base, and
+schema-validated plan generation, then hands the plan back to the Node app so
+the existing verifier, instruction-manual renderer, and evaluator keep working
+unchanged.
+
+Defaults are tuned for an M3 Pro with 18 GB unified memory:
+
+- Vision + planning: `Qwen3-VL-4B-Instruct-4bit` (MLX-VLM, ~2.5 GB)
+- Embeddings: `BAAI/bge-small-en-v1.5` + LanceDB
+- Structured output validated against the shared schema, with repair-and-retry
+
+Quick start:
+
+```bash
+python3 -m venv ml/.venv
+source ml/.venv/bin/activate
+pip install -r ml/requirements.txt
+python -m ml.ingest        # build the RAG index
+./ml/run.sh                # start the backend on http://127.0.0.1:8000
+```
+
+Then run the Node app and pick the **Local MLX** routing strategy (or set
+`ML_BACKEND_ENABLED=1`). To wire everything up without downloading models, run
+the backend in mock mode:
+
+```bash
+DIYPLAN_ML_MOCK=1 ./ml/run.sh
+```
+
+Full details, endpoints, and configuration are in [`ml/README.md`](ml/README.md).
+
 ## Useful Commands
 
 ```bash
@@ -170,8 +206,9 @@ Browser UI
 Node local server
   |
   |-- input normalization
+  |-- local MLX backend call, when the Apple Silicon ML service is running
   |-- multimodal planning call, when API key is available
-  |-- deterministic fallback plan, when API key is not available
+  |-- deterministic fallback plan, when neither is available
   |-- routing strategy selection
   |-- local safety and feasibility verifier
   |-- material-to-store search linking
@@ -201,9 +238,17 @@ Results UI
 │   ├── index.html            # app shell
 │   ├── styles.css            # responsive UI styling
 │   └── app.js                # browser-side interaction and rendering
+├── ml/                       # on-device MLX model backend (Apple Silicon)
+│   ├── app.py                # FastAPI service (perception, retrieval, planning)
+│   ├── pipeline.py           # agent pipeline + mock mode + JSON repair
+│   ├── models.py             # lazy MLX VLM / text LLM loaders
+│   ├── perception/planner prompts, schemas, config
+│   ├── rag/                  # knowledge base + embedding store (LanceDB)
+│   └── README.md             # setup, endpoints, and configuration
 ├── src/
 │   ├── materialCatalog.js    # small local material catalog and store links
 │   ├── openai.js             # OpenAI Responses API call
+│   ├── localBackend.js       # client for the local MLX backend
 │   ├── planner.js            # workflow orchestration and verifier
 │   ├── routing.js            # routing strategies, model profiles, cost units
 │   ├── evaluator.js          # plan quality scoring

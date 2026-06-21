@@ -70,6 +70,24 @@ export const routingStrategies = [
       fallbackStage: "plan_generation",
       fallbackModel: "strong_multimodal"
     }
+  },
+  {
+    id: "local_mlx",
+    label: "Local MLX",
+    description: "Run image understanding and planning on a local Apple Silicon MLX model, with deterministic local retrieval, verification, and rendering. Escalate to cloud only on low confidence or high risk.",
+    stageModels: {
+      image_understanding: "local_mlx_multimodal",
+      plan_generation: "local_mlx_multimodal",
+      material_matching: "local_rules",
+      verification: "local_rules",
+      formatting: "local_renderer"
+    },
+    escalation: {
+      enabled: true,
+      triggers: ["low_visual_confidence", "high_risk_terms", "buildability_below_threshold"],
+      fallbackStage: "plan_generation",
+      fallbackModel: "strong_multimodal"
+    }
   }
 ];
 
@@ -105,6 +123,14 @@ export const modelProfiles = {
     relativeOutputCost: 2,
     latencyClass: "low",
     notes: "Cheap verifier or reranker model."
+  },
+  local_mlx_multimodal: {
+    displayName: process.env.DIYPLAN_VLM_MODEL || "Qwen3-VL-4B-Instruct-4bit",
+    provider: "local-mlx",
+    relativeInputCost: 0,
+    relativeOutputCost: 0,
+    latencyClass: "medium",
+    notes: "On-device MLX vision-language model for image understanding and structured planning. No per-token API cost; latency depends on Apple Silicon."
   },
   local_vision_stub: {
     displayName: "local-vision-stub",
@@ -180,7 +206,7 @@ export function estimateRoutingCost(strategy) {
       stages.reduce((sum, item) => sum + item.relative_cost_units, 0)
     ),
     cloud_stage_count: stages.filter((item) => item.provider === "cloud").length,
-    local_stage_count: stages.filter((item) => item.provider === "local").length,
+    local_stage_count: stages.filter((item) => item.provider !== "cloud").length,
     stages
   };
 }
@@ -193,6 +219,13 @@ export function chooseCloudModelForPlan(strategy) {
   if (imageProfile?.provider === "cloud") return imageProfile.displayName;
 
   return process.env.OPENAI_MODEL || "gpt-4.1-mini";
+}
+
+export function strategyPrefersLocalMlx(strategy) {
+  return (
+    modelProfiles[strategy.stageModels.plan_generation]?.provider === "local-mlx" ||
+    modelProfiles[strategy.stageModels.image_understanding]?.provider === "local-mlx"
+  );
 }
 
 export function shouldUseCloud(preferences, strategy) {

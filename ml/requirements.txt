@@ -1,0 +1,30 @@
+# DIYPlan Agent local ML backend (Apple Silicon / MLX).
+# Tested target: M3 Pro, 18 GB unified memory, macOS 14+.
+#
+# Heavy model weights are downloaded on first run from the Hugging Face
+# mlx-community hub. Everything here installs on CPU/Metal without CUDA.
+
+# --- Web service ---
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.6
+
+# --- Apple Silicon inference (MLX) ---
+# Vision-language model (image understanding + structured planning).
+mlx>=0.29.0
+mlx-vlm>=0.4.3
+# Optional text-only LLM path + constrained decoding upgrade.
+mlx-lm>=0.31.0
+
+# --- Constrained / structured decoding (optional but recommended) ---
+# Outlines guarantees schema-valid JSON for the mlx-lm text path.
+outlines>=1.0
+
+# --- RAG: embeddings + vector store ---
+# bge-small-en-v1.5 works out of the box (no trust_remote_code), ~130 MB.
+sentence-transformers>=3.0
+lancedb>=0.13
+
+# --- Misc ---
+pillow>=10.0
+numpy>=1.24

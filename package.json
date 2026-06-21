@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "check": "node --check server.js && node --check public/app.js && node --check src/openai.js && node --check src/planner.js && node --check src/schema.js && node --check src/materialCatalog.js && node --check src/routing.js && node --check src/evaluator.js && node --check scripts/run-benchmark.js",
+    "check": "node --check server.js && node --check public/app.js && node --check src/openai.js && node --check src/planner.js && node --check src/localBackend.js && node --check src/schema.js && node --check src/materialCatalog.js && node --check src/routing.js && node --check src/evaluator.js && node --check scripts/run-benchmark.js",
     "benchmark": "node scripts/run-benchmark.js"
   },
   "engines": {

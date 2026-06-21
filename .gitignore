@@ -6,3 +6,10 @@ dist/
 *.log
 .codex/
 work/
+
+# Python local ML backend
+ml/.venv/
+ml/data/
+__pycache__/
+*.pyc
+.huggingface/

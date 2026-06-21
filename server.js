@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generatePlan } from "./src/planner.js";
 import { listRoutingStrategies } from "./src/routing.js";
+import { checkLocalBackend } from "./src/localBackend.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,10 +30,16 @@ const mimeTypes = new Map([
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === "GET" && req.url === "/api/health") {
+      const localBackend = await checkLocalBackend();
       return sendJson(res, 200, {
         ok: true,
         cloudModelConfigured: Boolean(process.env.OPENAI_API_KEY),
         defaultModel: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+        localBackend: {
+          available: Boolean(localBackend.available),
+          mock: localBackend.mock ?? null,
+          model: localBackend.model ?? null
+        },
         routingStrategies: listRoutingStrategies()
       });
     }

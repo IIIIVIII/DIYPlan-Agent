@@ -1,5 +1,6 @@
 import { buildStoreLinks, catalogContext } from "./materialCatalog.js";
 import { callOpenAIPlan } from "./openai.js";
+import { callLocalPlan, checkLocalBackend, localBackendConfigured } from "./localBackend.js";
 import { evaluatePlanQuality } from "./evaluator.js";
 import {
   buildRoutingPolicy,
@@ -7,7 +8,8 @@ import {
   detectEscalationTriggers,
   estimateRoutingCost,
   getRoutingStrategy,
-  shouldUseCloud
+  shouldUseCloud,
+  strategyPrefersLocalMlx
 } from "./routing.js";
 
 export async function generatePlan(payload) {
@@ -22,9 +24,49 @@ export async function generatePlan(payload) {
 
   let plan;
   let cloudMetrics = null;
+  let localResult = null;
   let mode = "mock";
 
-  if (shouldUseCloud(preferences, strategy)) {
+  const wantLocal = preferences.imageDataUrl &&
+    (strategyPrefersLocalMlx(strategy) || localBackendConfigured());
+
+  if (wantLocal) {
+    const health = await checkLocalBackend();
+    if (health.available) {
+      const localStartedAt = performance.now();
+      try {
+        localResult = await callLocalPlan({
+          imageDataUrl: preferences.imageDataUrl,
+          preferences
+        });
+        plan = localResult.plan;
+        mode = localResult.metrics.mode || "local-mlx";
+        for (const localStage of localResult.stages) {
+          trace.push(stage(localStage.name, localStage.model, localStage.note, localStage.latency_ms || 0));
+        }
+      } catch (error) {
+        trace.push(
+          stage(
+            "local-backend-error",
+            health.model || "local-mlx",
+            `Local ML backend failed, falling back: ${String(error.message || error).slice(0, 160)}`,
+            Math.round(performance.now() - localStartedAt)
+          )
+        );
+      }
+    } else {
+      trace.push(
+        stage(
+          "local-backend-unavailable",
+          "local-mlx",
+          "Local ML backend was not reachable; using cloud or mock fallback.",
+          1
+        )
+      );
+    }
+  }
+
+  if (!plan && shouldUseCloud(preferences, strategy)) {
     const cloudStartedAt = performance.now();
     const modelOverride = chooseCloudModelForPlan(strategy);
     const result = await callOpenAIPlan({
@@ -44,7 +86,9 @@ export async function generatePlan(payload) {
         Math.round(performance.now() - cloudStartedAt)
       )
     );
-  } else {
+  }
+
+  if (!plan) {
     const fallbackStartedAt = performance.now();
     plan = fallbackPlan(preferences);
     trace.push(
@@ -86,9 +130,11 @@ export async function generatePlan(payload) {
   const metrics = {
     total_latency_ms: Math.round(performance.now() - startedAt),
     cloud_latency_ms: cloudMetrics?.cloud_latency_ms || 0,
-    model: cloudMetrics?.model || strategy.stageModels.plan_generation,
+    local_latency_ms: localResult?.metrics?.local_latency_ms || 0,
+    model: cloudMetrics?.model || localResult?.metrics?.model || strategy.stageModels.plan_generation,
+    backend: localResult ? "mlx" : mode === "cloud" ? "cloud" : "mock",
     routing_strategy: strategy.id,
-    estimated_call_count: mode === "cloud" ? 1 : 0,
+    estimated_call_count: mode === "cloud" ? 1 : localResult ? localResult.stages.length : 0,
     relative_cost_units: routingCost.total_relative_cost_units,
     cloud_stage_count: routingCost.cloud_stage_count
   };
@@ -116,7 +162,9 @@ export async function generatePlan(payload) {
     evaluation_report: evaluationReport,
     trace,
     plan: verified,
-    purchase_links: purchaseLinks
+    purchase_links: purchaseLinks,
+    local_perception: localResult?.perception || null,
+    retrieval: localResult?.retrieval || []
   };
 }
 
