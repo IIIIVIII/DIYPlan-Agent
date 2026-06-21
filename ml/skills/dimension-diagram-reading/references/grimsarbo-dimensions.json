@@ -1,0 +1,16 @@
+{
+  "source": "GRIMSARBO dimension page",
+  "dimensions": {
+    "diameter": { "cm": 40, "in": 15.75, "evidence": "top horizontal dimension" },
+    "height": { "cm": 43, "in": 16.875, "evidence": "left vertical dimension" },
+    "top_to_cone_depth": { "cm": 11, "in": 4.375, "evidence": "right vertical dimension" }
+  },
+  "visual_parts": [
+    "round wood tabletop with center hole",
+    "red rim",
+    "red cone apron",
+    "red cylindrical pedestal",
+    "red four-arm cross base",
+    "black leveling feet"
+  ]
+}

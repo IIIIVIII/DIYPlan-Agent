@@ -1,0 +1,13 @@
+{
+  "source": "GRIMSARBO diy.pdf page 6",
+  "hardware": [
+    { "sku": "115461", "quantity": 3, "kind": "flat_head_screw", "icon": "short_threaded_screw" },
+    { "sku": "10074126", "quantity": 8, "kind": "button_head_screw", "icon": "short_dome_screw" },
+    { "sku": "195312", "quantity": 4, "kind": "leveling_foot", "icon": "thumb_screw_leveler" },
+    { "sku": "100092", "quantity": 1, "kind": "allen_key", "icon": "hex_key" }
+  ],
+  "large_parts": [
+    { "id": "underside_hub_flange", "quantity": 1, "kind": "hub_flange_plate" },
+    { "id": "top_mount_plate", "quantity": 1, "kind": "round_mount_plate" }
+  ]
+}

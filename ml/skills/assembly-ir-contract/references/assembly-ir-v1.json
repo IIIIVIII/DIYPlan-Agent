@@ -1,0 +1,21 @@
+{
+  "version": "assembly_ir_v1",
+  "step": {
+    "id": "string",
+    "source_page": "number",
+    "source_step": "string",
+    "title": "string",
+    "primary_operation": "insert_horizontal | drop_vertical | thread_rotate | tighten_with_tool | adjust_level | check_level",
+    "parts_used": ["part_id"],
+    "hardware_used": ["hardware_id"],
+    "repeat_count": "number or null",
+    "insets": ["inset_id"],
+    "needs_human_check": false
+  },
+  "inset": {
+    "type": "circle | rectangle",
+    "target": "part_id or connection_id",
+    "shows": ["hardware_id", "tool_id", "motion_arrow"],
+    "label": "1x | 3x | 4x | 8x"
+  }
+}

@@ -64,6 +64,7 @@ export async function callLocalPlan({ imageDataUrl, imageDataUrls, preferences }
     instructionModel: body.instruction_model || null,
     partCutouts: body.part_cutouts || null,
     dominantColor: body.dominant_color || null,
+    skills: body.skills || [],
     stages: body.stages || [],
     metrics: {
       ...(body.metrics || {}),

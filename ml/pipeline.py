@@ -79,7 +79,17 @@ def _live_response(preferences: dict, image_data_urls, stages: List[dict], start
     retrieved = get_store().retrieve(query, top_k=config.RETRIEVAL_TOP_K)
     stages.append(_stage("knowledge-retrieval", config.EMBED_MODEL, f"Retrieved {len(retrieved)} DIY knowledge snippets.", t0))
 
+    t0 = time.perf_counter()
     post_skills = skills_for_request(perception, preferences)
+    if post_skills["ids"] != pre_skills["ids"]:
+        stages.append(
+            _stage(
+                "post-perception-skill-match",
+                "local-skills",
+                f"Loaded skills after visual analysis: {', '.join(post_skills['ids']) or 'none'}.",
+                t0,
+            )
+        )
 
     # Stage 3: planning (constrained text LLM if configured, else VLM)
     t0 = time.perf_counter()

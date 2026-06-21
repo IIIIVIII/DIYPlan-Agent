@@ -67,7 +67,7 @@ def planner_prompt(
     skills_block = ""
     if skill_context:
         skills_block = (
-            "\nDomain skills (MUST follow for joinery, manual steps, and finish sourcing):\n"
+            "\nDomain skills (MUST follow when relevant; these override generic DIY guesses):\n"
             f"{skill_context}\n\n"
         )
     return (
@@ -84,6 +84,8 @@ def planner_prompt(
         "- Prefer low-risk categories (side tables, coffee tables, shelves, nightstands, round tables).\n"
         "- Use real dressed lumber dimensions and realistic US prices.\n"
         "- Keep the itemized material total within the low/high estimate.\n"
+        "- If source-manual skills are present, preserve the source sequence, hardware IDs, counts, and mechanical interfaces.\n"
+        "- If AssemblyIR/manual skills are present, write steps that can be rendered as one primary visual operation per step.\n"
         "- Fill every field.\n\n"
         "Return JSON exactly in this shape (types shown, not values):\n"
         f"{schema_hint}"
@@ -106,8 +108,14 @@ _ROLES = (
 )
 
 
-def instruction_prompt(preferences: dict, perception: dict) -> str:
+def instruction_prompt(preferences: dict, perception: dict, skill_context: str = "") -> str:
     perception_text = json.dumps(perception, indent=2) if perception else "(none)"
+    skills_block = ""
+    if skill_context:
+        skills_block = (
+            "\nManual-generation skills (MUST follow; use them as the renderer contract):\n"
+            f"{skill_context}\n\n"
+        )
     schema_hint = {
         "object_type": "string",
         "topology": "table | shelf",
@@ -137,6 +145,7 @@ def instruction_prompt(preferences: dict, perception: dict) -> str:
         f"{INSTRUCTION_SYSTEM}\n\n"
         "Image understanding result:\n"
         f"{perception_text}\n\n"
+        f"{skills_block}"
         "Rules:\n"
         "- List every visible structural part (tabletop or its halves, legs, "
         "aprons/rails, braces, feet, shelves, sides), each with its own color.\n"
@@ -147,6 +156,8 @@ def instruction_prompt(preferences: dict, perception: dict) -> str:
         "- Order steps the way the piece is actually assembled. Each step should "
         "introduce only a few new parts via add_parts (referencing part ids).\n"
         "- Put repeated fasteners in hardware with explicit counts (e.g. 2, 4, 8).\n"
+        "- Preserve visible hardware SKU numbers when available.\n"
+        "- Prefer operation labels from the motion-arrow skill when present.\n"
         "- Choose topology 'table' for tables/desks/nightstands, 'shelf' for "
         "bookshelves/shelving.\n\n"
         "Return JSON exactly in this shape (types shown, not values):\n"

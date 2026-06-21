@@ -2,22 +2,117 @@
   "version": "1.0.0",
   "skills": [
     {
+      "id": "token-budget-routing",
+      "title": "Token budget and skill routing",
+      "triggers": ["local mlx", "qwen", "routing", "token", "latency", "speed"],
+      "path": "token-budget-routing/SKILL.md",
+      "priority": 5,
+      "always": true
+    },
+    {
+      "id": "source-manual-grounding",
+      "title": "Grounding in source manuals and PDFs",
+      "triggers": ["manual", "instruction", "assembly", "pdf", "source", "booklet", "ikea", "grimsarbo"],
+      "path": "source-manual-grounding/SKILL.md",
+      "priority": 10
+    },
+    {
+      "id": "assembly-ir-contract",
+      "title": "AssemblyIR structured manual contract",
+      "triggers": ["manual", "instruction", "assembly", "renderer", "schema", "json", "ir"],
+      "path": "assembly-ir-contract/SKILL.md",
+      "priority": 15
+    },
+    {
+      "id": "hardware-inventory",
+      "title": "Hardware inventory and SKU preservation",
+      "triggers": ["hardware", "screw", "bolt", "allen", "sku", "195312", "10074126", "115461", "100092", "leveling foot"],
+      "path": "hardware-inventory/SKILL.md",
+      "priority": 20
+    },
+    {
+      "id": "dimension-diagram-reading",
+      "title": "Dimension diagram reading",
+      "triggers": ["dimension", "cm", "inch", "diameter", "height", "drawing", "diagram"],
+      "path": "dimension-diagram-reading/SKILL.md",
+      "priority": 25
+    },
+    {
+      "id": "manual-page-layout",
+      "title": "Dense IKEA-style page layout",
+      "triggers": ["manual", "instruction", "assembly", "ikea", "page", "layout", "line art"],
+      "path": "manual-page-layout/SKILL.md",
+      "priority": 30
+    },
+    {
+      "id": "zoom-inset-detail",
+      "title": "Zoom insets and detail callouts",
+      "triggers": ["zoom", "inset", "detail", "callout", "circle", "leader", "hardware"],
+      "path": "zoom-inset-detail/SKILL.md",
+      "priority": 35
+    },
+    {
+      "id": "motion-arrow-language",
+      "title": "Motion arrow language",
+      "triggers": ["arrow", "slide", "insert", "drop", "rotate", "tighten", "adjust", "level"],
+      "path": "motion-arrow-language/SKILL.md",
+      "priority": 40
+    },
+    {
       "id": "pedestal-joinery",
       "title": "Pedestal table wedge-tab joinery",
       "triggers": ["pedestal", "round", "dining", "bistro", "drum", "cross base", "column"],
-      "path": "pedestal-joinery/SKILL.md"
+      "path": "pedestal-joinery/SKILL.md",
+      "priority": 45
+    },
+    {
+      "id": "top-mount-interface",
+      "title": "Round top mount interface",
+      "triggers": ["top mount", "mounting plate", "center hole", "tabletop", "disc", "plate"],
+      "path": "top-mount-interface/SKILL.md",
+      "priority": 50
+    },
+    {
+      "id": "leveling-foot-detail",
+      "title": "Adjustable leveling foot detail",
+      "triggers": ["leveling", "leveler", "foot", "glide", "195312", "adjust"],
+      "path": "leveling-foot-detail/SKILL.md",
+      "priority": 55
+    },
+    {
+      "id": "grimsarbo-pedestal-fixture",
+      "title": "GRIMSARBO pedestal source fixture",
+      "triggers": ["grimsarbo", "red pedestal", "small round table", "40 cm", "195312", "10074126", "115461"],
+      "path": "grimsarbo-pedestal-fixture/SKILL.md",
+      "priority": 60
     },
     {
       "id": "ikea-manual-style",
       "title": "IKEA-style assembly manual conventions",
       "triggers": ["manual", "instruction", "assembly", "ikea", "line art"],
-      "path": "ikea-manual-style/SKILL.md"
+      "path": "ikea-manual-style/SKILL.md",
+      "priority": 65
+    },
+    {
+      "id": "renderer-primitive-library",
+      "title": "SVG renderer primitive mapping",
+      "triggers": ["renderer", "svg", "primitive", "line art", "arrow", "icon"],
+      "path": "renderer-primitive-library/SKILL.md",
+      "priority": 70
+    },
+    {
+      "id": "manual-verifier",
+      "title": "Manual verifier rules",
+      "triggers": ["verify", "verifier", "quality", "manual", "instruction", "assembly"],
+      "path": "manual-verifier/SKILL.md",
+      "priority": 75
     },
     {
       "id": "finish-color-match",
       "title": "Paint and colour matching for factory finishes",
       "triggers": ["paint", "red", "color", "colour", "finish", "primer", "laminate"],
-      "path": "finish-color-match/SKILL.md"
+      "path": "finish-color-match/SKILL.md",
+      "priority": 80
     }
   ]
 }

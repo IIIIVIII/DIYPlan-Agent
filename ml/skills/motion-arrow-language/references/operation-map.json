@@ -1,0 +1,21 @@
+{
+  "verbs": {
+    "slide": "insert_horizontal",
+    "push": "insert_horizontal",
+    "place": "drop_vertical",
+    "lower": "drop_vertical",
+    "thread": "thread_rotate",
+    "screw": "tighten_with_tool",
+    "tighten": "tighten_with_tool",
+    "adjust": "adjust_level",
+    "level": "check_level"
+  },
+  "operations": {
+    "insert_horizontal": { "arrow": "solid_block_arrow", "needs_target_slot": true },
+    "drop_vertical": { "arrow": "solid_down_arrow", "needs_alignment_mark": true },
+    "thread_rotate": { "arrow": "curved_rotation_arrow", "needs_zoom": true },
+    "tighten_with_tool": { "arrow": "curved_rotation_arrow", "needs_tool_icon": true },
+    "adjust_level": { "arrow": "up_down_arrows", "needs_zoom": true },
+    "check_level": { "icon": "spirit_level" }
+  }
+}

@@ -26,6 +26,21 @@ manual. The Pydantic schema in `schemas.py` mirrors the Node `planSchema`, so a
 generation that validates here is guaranteed to be shape-compatible downstream.
 Invalid JSON is repaired-and-retried before the service errors out.
 
+## Runtime skills
+
+The backend includes a compact runtime skill library in `ml/skills/`. It uses
+the same general pattern as community Agent Skills: a `manifest.json` selects
+short `SKILL.md` files plus optional `references/*.json` facts. The loader
+matches skills by furniture type, perception output, and manual-related
+keywords, then injects only the selected context into the VLM prompt.
+
+Current skill groups cover source-manual grounding, AssemblyIR, IKEA page
+layout, hardware SKU preservation, dimension diagrams, zoom insets, motion
+arrows, pedestal joinery, top-mount interfaces, leveling feet, renderer
+primitives, verifier rules, and token-budget routing. This is intentionally
+split into many small skills so the 4B local model gets precise rules without a
+giant slow prompt.
+
 ## Model choices (tuned for M3 Pro / 18 GB)
 
 | Stage | Default model | Why |

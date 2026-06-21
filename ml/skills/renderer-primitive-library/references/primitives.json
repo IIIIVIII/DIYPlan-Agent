@@ -1,0 +1,22 @@
+{
+  "shape_to_primitive": {
+    "round_top": "disc_solid",
+    "mount_plate": "disc_solid",
+    "hub_flange": "disc_solid",
+    "pedestal_column": "cylinder",
+    "cone_apron": "cone_frustum",
+    "arm_block": "iso_box",
+    "leveling_foot": "thumb_screw",
+    "button_head_screw": "button_screw",
+    "flat_head_screw": "flat_head_screw",
+    "allen_key": "allen_key"
+  },
+  "operation_to_primitive": {
+    "insert_horizontal": "solid_arrow",
+    "drop_vertical": "solid_arrow",
+    "thread_rotate": "curved_arrow",
+    "tighten_with_tool": "curved_arrow",
+    "adjust_level": "solid_arrow_pair",
+    "check_level": "level_icon"
+  }
+}

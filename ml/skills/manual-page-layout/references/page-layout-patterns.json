@@ -1,0 +1,24 @@
+{
+  "patterns": [
+    {
+      "id": "inventory_page",
+      "regions": ["hardware_row", "large_parts_row"],
+      "required": ["part_icon", "quantity_label", "sku_label_when_available"]
+    },
+    {
+      "id": "two_step_vertical",
+      "regions": ["top_step_small", "bottom_step_large"],
+      "example": "GRIMSARBO page 7"
+    },
+    {
+      "id": "main_scene_with_zoom",
+      "regions": ["main_scene", "circular_zoom_inset", "leader_line"],
+      "example": "GRIMSARBO page 8"
+    },
+    {
+      "id": "rectangular_alignment_inset",
+      "regions": ["main_scene", "rectangular_inset", "finger_or_alignment_mark"],
+      "example": "GRIMSARBO page 10"
+    }
+  ]
+}

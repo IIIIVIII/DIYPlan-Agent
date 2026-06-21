@@ -1,0 +1,23 @@
+{
+  "object": "small round pedestal table",
+  "source_pdf": "diy.pdf",
+  "pages": {
+    "6": "hardware and large parts inventory",
+    "7": "step 1 leveling feet and step 2 slide arm into hub",
+    "8": "step 3 tighten hub screws with Allen key",
+    "9": "step 4 fasten top mounting plate with three screws",
+    "10": "step 5 drop and align top disc",
+    "11": "step 6 press tabletop down",
+    "12": "final level check and adjust four feet"
+  },
+  "expected_hardware_skus": ["195312", "10074126", "115461", "100092"],
+  "expected_operations": [
+    "thread_rotate",
+    "insert_horizontal",
+    "tighten_with_tool",
+    "tighten_with_tool",
+    "drop_vertical",
+    "drop_vertical",
+    "adjust_level"
+  ]
+}

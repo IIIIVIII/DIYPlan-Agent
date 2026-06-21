@@ -1,0 +1,19 @@
+{
+  "reject_phrases": [
+    "attach parts",
+    "secure everything",
+    "use screws as needed",
+    "assemble base"
+  ],
+  "required_for_hardware_steps": [
+    "hardware_id",
+    "count",
+    "operation",
+    "inset"
+  ],
+  "required_for_source_replica": [
+    "source_page",
+    "source_step",
+    "source_evidence"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "source_pages": [9, 10, 11],
+  "parts": [
+    { "id": "round_tabletop", "features": ["center_hole", "raised_rim"] },
+    { "id": "top_mount_plate", "features": ["three screw holes", "alignment notches"] },
+    { "id": "column_top", "features": ["center stud or receiving post"] }
+  ],
+  "hardware": [
+    { "sku": "115461", "quantity": 3, "operation": "tighten_with_tool" }
+  ],
+  "operations": [
+    "tighten mount plate to underside",
+    "drop top cap or disc into center hole",
+    "align marks by hand"
+  ]
+}

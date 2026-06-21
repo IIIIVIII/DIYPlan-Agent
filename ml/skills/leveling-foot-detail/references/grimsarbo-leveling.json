@@ -1,0 +1,15 @@
+{
+  "sku": "195312",
+  "quantity": 4,
+  "install_step": {
+    "source_page": 7,
+    "source_step": "1",
+    "operation": "thread_rotate",
+    "count_label": "1x detail, 4x repeated"
+  },
+  "final_adjust_step": {
+    "source_page": 12,
+    "operation": "adjust_level",
+    "visuals": ["up_down_arrows_at_each_arm", "circle_inset_under_foot", "4x label"]
+  }
+}

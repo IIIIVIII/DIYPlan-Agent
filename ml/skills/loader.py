@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import Iterable, List
 
 _SKILLS_ROOT = Path(__file__).resolve().parent
 
@@ -23,14 +23,42 @@ def _manifest() -> dict:
 
 def _text_blob(category: str, perception: dict, preferences: dict) -> str:
     parts = [
+        category,
         str(preferences.get("furnitureType") or ""),
+        str(preferences.get("targetSize") or ""),
+        str(preferences.get("description") or ""),
         str(perception.get("category") or ""),
         str(perception.get("structure") or ""),
+        str(perception.get("approx_dimensions_note") or ""),
+        str(perception.get("finish_note") or ""),
         " ".join(perception.get("visible_parts") or []),
         " ".join(perception.get("likely_materials") or []),
         str(perception.get("style") or ""),
     ]
     return " ".join(parts).lower()
+
+
+def _append_unique(items: List[str], new_items: Iterable[str]) -> None:
+    for item in new_items:
+        if item and item not in items:
+            items.append(item)
+
+
+def _skill_entry(skill_id: str) -> dict:
+    for entry in _manifest().get("skills", []):
+        if entry.get("id") == skill_id:
+            return entry
+    return {}
+
+
+def _sort_skill_ids(skill_ids: List[str]) -> List[str]:
+    return sorted(
+        skill_ids,
+        key=lambda sid: (
+            int(_skill_entry(sid).get("priority", 1000)),
+            sid,
+        ),
+    )
 
 
 def match_skills(perception: dict | None, preferences: dict | None) -> List[str]:
@@ -40,16 +68,53 @@ def match_skills(perception: dict | None, preferences: dict | None) -> List[str]
     blob = _text_blob("", perception, preferences)
     matched: List[str] = []
     for entry in _manifest().get("skills", []):
+        if entry.get("always"):
+            _append_unique(matched, [entry["id"]])
+            continue
         triggers = entry.get("triggers") or []
         if any(t.lower() in blob for t in triggers):
-            matched.append(entry["id"])
-    # Pedestal tables: always load joinery + finish skills when round/dining selected
+            _append_unique(matched, [entry["id"]])
+
+    manualish = any(k in blob for k in ("manual", "instruction", "assembly", "booklet", "pdf", "ikea", "grimsarbo"))
+    if manualish:
+        _append_unique(
+            matched,
+            (
+                "source-manual-grounding",
+                "assembly-ir-contract",
+                "hardware-inventory",
+                "manual-page-layout",
+                "zoom-inset-detail",
+                "motion-arrow-language",
+                "renderer-primitive-library",
+                "manual-verifier",
+            ),
+        )
+
+    # Pedestal tables: load the strict source-manual and joinery/manual skills.
     ftype = str(preferences.get("furnitureType") or "").lower()
-    if any(k in ftype for k in ("round", "dining", "pedestal", "bistro")):
-        for sid in ("pedestal-joinery", "finish-color-match", "ikea-manual-style"):
-            if sid not in matched:
-                matched.append(sid)
-    return matched
+    roundish = any(k in ftype for k in ("round", "dining", "pedestal", "bistro")) or any(
+        k in blob for k in ("round", "pedestal", "cross base", "column", "40 cm", "195312")
+    )
+    if roundish:
+        _append_unique(
+            matched,
+            (
+                "source-manual-grounding",
+                "dimension-diagram-reading",
+                "hardware-inventory",
+                "grimsarbo-pedestal-fixture",
+                "leveling-foot-detail",
+                "top-mount-interface",
+                "pedestal-joinery",
+                "ikea-manual-style",
+                "renderer-primitive-library",
+                "manual-verifier",
+                "finish-color-match",
+            ),
+        )
+
+    return _sort_skill_ids(matched)
 
 
 def _read_skill_body(rel_path: str) -> str:
@@ -85,7 +150,7 @@ def load_skill_context(skill_ids: List[str], max_chars: int = 12000) -> str:
         return ""
     parts: List[str] = []
     id_to_path = {s["id"]: s["path"] for s in _manifest().get("skills", [])}
-    for sid in skill_ids:
+    for sid in _sort_skill_ids(skill_ids):
         rel = id_to_path.get(sid)
         if not rel:
             continue

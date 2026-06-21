@@ -169,7 +169,8 @@ export async function generatePlan(payload) {
     plan: verified,
     purchase_links: purchaseLinks,
     local_perception: localResult?.perception || null,
-    retrieval: localResult?.retrieval || []
+    retrieval: localResult?.retrieval || [],
+    local_skills: localResult?.skills || []
   };
 }
 

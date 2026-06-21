@@ -1,0 +1,22 @@
+{
+  "required_fields": [
+    "source_mode",
+    "source_page",
+    "source_step",
+    "source_evidence",
+    "parts_used",
+    "hardware_used",
+    "operation"
+  ],
+  "verifier_checks": [
+    "step_order_matches_source",
+    "hardware_ids_preserved",
+    "counts_preserved",
+    "no_unseen_extra_steps",
+    "ambiguous_steps_flagged"
+  ],
+  "modes": {
+    "source_manual_replica": "mirror booklet sequence and visible assembly facts",
+    "diy_substitute": "create a safe DIY alternative using the reference only as inspiration"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "circle_insets": [
+    {
+      "operation": "thread_leveler",
+      "hardware_sku": "195312",
+      "count": "1x per arm, 4x total",
+      "visuals": ["thumb screw", "vertical insertion line", "curved rotation arrow"]
+    },
+    {
+      "operation": "drive_button_screws",
+      "hardware_sku": "10074126",
+      "count": "4x",
+      "visuals": ["allen key 100092", "curved rotation arrow", "screw heads"]
+    }
+  ],
+  "rectangular_insets": [
+    {
+      "operation": "mount_top_plate",
+      "hardware_sku": "115461",
+      "count": "3x",
+      "visuals": ["plate above underside", "dashed hidden column", "allen key"]
+    },
+    {
+      "operation": "drop_tabletop_disc",
+      "count": "1x",
+      "visuals": ["large down arrow", "alignment notches", "finger icons"]
+    }
+  ]
+}
