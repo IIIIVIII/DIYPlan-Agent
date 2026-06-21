@@ -10,6 +10,13 @@
       "always": true
     },
     {
+      "id": "context-token-audit",
+      "title": "Context token audit",
+      "triggers": ["token", "context", "latency", "speed", "cost", "routing", "many skills"],
+      "path": "context-token-audit/SKILL.md",
+      "priority": 6
+    },
+    {
       "id": "source-manual-grounding",
       "title": "Grounding in source manuals and PDFs",
       "triggers": ["manual", "instruction", "assembly", "pdf", "source", "booklet", "ikea", "grimsarbo"],
@@ -17,11 +24,32 @@
       "priority": 10
     },
     {
+      "id": "pdf-svg-fixture-extraction",
+      "title": "PDF to SVG source fixture extraction",
+      "triggers": ["pdf", "source", "manual", "fixture", "exact", "one to one", "一比一", "svg"],
+      "path": "pdf-svg-fixture-extraction/SKILL.md",
+      "priority": 12
+    },
+    {
+      "id": "fixture-fast-path-routing",
+      "title": "Known fixture fast path routing",
+      "triggers": ["sample", "fixture", "known", "fast", "skip model", "latency", "speed"],
+      "path": "fixture-fast-path-routing/SKILL.md",
+      "priority": 14
+    },
+    {
       "id": "assembly-ir-contract",
       "title": "AssemblyIR structured manual contract",
       "triggers": ["manual", "instruction", "assembly", "renderer", "schema", "json", "ir"],
       "path": "assembly-ir-contract/SKILL.md",
       "priority": 15
+    },
+    {
+      "id": "mechanical-assembly-taxonomy",
+      "title": "Mechanical assembly operation taxonomy",
+      "triggers": ["thread", "slide", "tighten", "drop", "align", "adjust", "interface", "hardware"],
+      "path": "mechanical-assembly-taxonomy/SKILL.md",
+      "priority": 18
     },
     {
       "id": "hardware-inventory",
@@ -50,6 +78,13 @@
       "triggers": ["zoom", "inset", "detail", "callout", "circle", "leader", "hardware"],
       "path": "zoom-inset-detail/SKILL.md",
       "priority": 35
+    },
+    {
+      "id": "prompt-crop-angle-control",
+      "title": "Prompt crop and view-angle control",
+      "triggers": ["crop", "angle", "view", "photo", "diagram", "dimension", "manual page", "inset"],
+      "path": "prompt-crop-angle-control/SKILL.md",
+      "priority": 36
     },
     {
       "id": "motion-arrow-language",
@@ -101,11 +136,32 @@
       "priority": 70
     },
     {
+      "id": "parametric-cad-grounding",
+      "title": "Parametric CAD grounding",
+      "triggers": ["cad", "parametric", "geometry", "primitive", "constraint", "mechanical"],
+      "path": "parametric-cad-grounding/SKILL.md",
+      "priority": 72
+    },
+    {
+      "id": "diagram-line-art-control",
+      "title": "Diagram line-art control",
+      "triggers": ["diagram", "line art", "black white", "svg", "manual", "instruction"],
+      "path": "diagram-line-art-control/SKILL.md",
+      "priority": 73
+    },
+    {
       "id": "manual-verifier",
       "title": "Manual verifier rules",
       "triggers": ["verify", "verifier", "quality", "manual", "instruction", "assembly"],
       "path": "manual-verifier/SKILL.md",
       "priority": 75
+    },
+    {
+      "id": "visual-regression-qa",
+      "title": "Visual regression QA for manual pages",
+      "triggers": ["visual", "regression", "qa", "screenshot", "verify", "exact", "manual"],
+      "path": "visual-regression-qa/SKILL.md",
+      "priority": 76
     },
     {
       "id": "finish-color-match",

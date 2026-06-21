@@ -41,6 +41,12 @@ primitives, verifier rules, and token-budget routing. This is intentionally
 split into many small skills so the 4B local model gets precise rules without a
 giant slow prompt.
 
+Known manuals can also use exact SVG fixtures instead of generated redrawing.
+For the current GRIMSARBO-style sample, `scripts/extract-manual-fixtures.py`
+extracts pages 6-12 from the user-provided `diy.pdf` into
+`public/assets/manuals/grimsarbo/`, and `src/grimsarboManual.js` embeds those
+pages directly in the instruction model.
+
 ## Model choices (tuned for M3 Pro / 18 GB)
 
 | Stage | Default model | Why |

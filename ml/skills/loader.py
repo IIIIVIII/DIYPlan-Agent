@@ -81,13 +81,19 @@ def match_skills(perception: dict | None, preferences: dict | None) -> List[str]
             matched,
             (
                 "source-manual-grounding",
+                "pdf-svg-fixture-extraction",
+                "fixture-fast-path-routing",
                 "assembly-ir-contract",
+                "mechanical-assembly-taxonomy",
                 "hardware-inventory",
                 "manual-page-layout",
                 "zoom-inset-detail",
                 "motion-arrow-language",
+                "prompt-crop-angle-control",
                 "renderer-primitive-library",
+                "diagram-line-art-control",
                 "manual-verifier",
+                "visual-regression-qa",
             ),
         )
 
@@ -101,15 +107,20 @@ def match_skills(perception: dict | None, preferences: dict | None) -> List[str]
             matched,
             (
                 "source-manual-grounding",
+                "pdf-svg-fixture-extraction",
+                "fixture-fast-path-routing",
                 "dimension-diagram-reading",
                 "hardware-inventory",
                 "grimsarbo-pedestal-fixture",
+                "mechanical-assembly-taxonomy",
                 "leveling-foot-detail",
                 "top-mount-interface",
                 "pedestal-joinery",
                 "ikea-manual-style",
                 "renderer-primitive-library",
+                "diagram-line-art-control",
                 "manual-verifier",
+                "visual-regression-qa",
                 "finish-color-match",
             ),
         )
@@ -144,7 +155,7 @@ def _read_references(skill_id: str) -> str:
     return "\n\n".join(chunks)
 
 
-def load_skill_context(skill_ids: List[str], max_chars: int = 12000) -> str:
+def load_skill_context(skill_ids: List[str], max_chars: int = 30000) -> str:
     """Concatenate matched skills for prompt injection."""
     if not skill_ids:
         return ""

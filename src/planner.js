@@ -1,5 +1,5 @@
 import { buildStoreLinks, catalogContext } from "./materialCatalog.js";
-import { generatePedestalManual } from "./pedestalManual.js";
+import { generateGrimsarboManual } from "./grimsarboManual.js";
 import { enrichPedestalPlan } from "./pedestalJoinery.js";
 import { callOpenAIPlan } from "./openai.js";
 import { callLocalPlan, callLocalUnderstand, checkLocalBackend, localBackendConfigured } from "./localBackend.js";
@@ -417,7 +417,7 @@ function buildInstructionModel(plan, preferences, options = {}) {
   const hint = `${category} ${String(preferences.furnitureType || "")} ${String(plan.detected_object?.structure || "")}`.toLowerCase();
   const isPedestal = /round|dining|pedestal|bistro|bar table|cafe|drum|stool table/.test(hint);
   if (isPedestal) {
-    return generatePedestalManual(plan, preferences, { baseColor: normalizeHexColor(options.dominantColor) });
+    return generateGrimsarboManual(plan, preferences, { baseColor: normalizeHexColor(options.dominantColor) });
   }
   if (category.includes("book") || category.includes("shelf")) return bookshelfInstructionModel(plan);
   return sideTableInstructionModel(plan);

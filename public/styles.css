@@ -1015,6 +1015,14 @@ code {
   align-items: start;
 }
 
+.manual-layout.source-replica-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.manual-layout.source-replica-layout .parts-tray {
+  display: none;
+}
+
 .parts-tray {
   border: 1px solid rgba(246, 240, 223, 0.14);
   border-radius: 8px;
@@ -1254,6 +1262,12 @@ code {
 .manual-page.ikea {
   background: #ffffff;
   border: 1px solid rgba(20, 22, 15, 0.18);
+}
+
+.manual-page.ikea.source-replica {
+  padding: 0;
+  border-color: rgba(20, 22, 15, 0.12);
+  background: #ffffff;
 }
 
 .manual-page-head.ikea-head {

@@ -889,6 +889,8 @@ function renderSteps(steps, instructionModel) {
 
 function renderIkeaManual(model) {
   const parts = model.parts || [];
+  const isSourceReplica = model.source === "source_manual_replica";
+  document.querySelector(".manual-layout")?.classList.toggle("source-replica-layout", isSourceReplica);
   document.querySelector("#instruction-mode").textContent = humanizeRenderer(model.renderer || "line art");
   const finishNotes = model.finish_plan?.notes?.join(" ") || "";
   document.querySelector("#instruction-note").textContent = [model.source_note, finishNotes].filter(Boolean).join(" ");
@@ -904,11 +906,13 @@ function renderIkeaManual(model) {
   document.querySelector("#instruction-pages").innerHTML = (model.pages || [])
     .map(
       (page) => `
-        <article class="manual-page ikea">
-          <div class="manual-page-head ikea-head">
-            <h4>${escapeHtml(page.title)}</h4>
-            <p>${escapeHtml(page.caption || "")}</p>
-          </div>
+        <article class="manual-page ikea${isSourceReplica ? " source-replica" : ""}">
+          ${isSourceReplica ? "" : `
+            <div class="manual-page-head ikea-head">
+              <h4>${escapeHtml(page.title)}</h4>
+              <p>${escapeHtml(page.caption || "")}</p>
+            </div>
+          `}
           ${renderIkeaPageSvg(page)}
         </article>
       `
@@ -920,6 +924,7 @@ function renderInstructionManual(instructionModel) {
   if (instructionModel?.pages?.length) {
     return renderIkeaManual(instructionModel);
   }
+  document.querySelector(".manual-layout")?.classList.remove("source-replica-layout");
   const parts = instructionModel.parts || [];
   const frames = instructionModel.frames || [];
   document.querySelector("#instruction-mode").textContent = humanizeRenderer(instructionModel.renderer || "2D vector");

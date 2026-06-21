@@ -13,12 +13,17 @@ Domain knowledge packaged like [Agent Skills](https://github.com/YouMind-OpenLab
 | ID | Purpose |
 |----|---------|
 | `token-budget-routing` | Compact context loading for local Qwen/MLX |
+| `context-token-audit` | Audit skill context size, priority, and response visibility |
 | `source-manual-grounding` | Treat source PDFs/booklets as ground truth |
+| `pdf-svg-fixture-extraction` | Convert trusted source PDF pages into exact SVG fixtures |
+| `fixture-fast-path-routing` | Skip expensive VLM calls for known source fixtures |
 | `assembly-ir-contract` | Structured manual-generation IR |
+| `mechanical-assembly-taxonomy` | Normalize thread/slide/tighten/drop/align/adjust operations |
 | `hardware-inventory` | Hardware SKUs, icons, and counts |
 | `dimension-diagram-reading` | Dimension extraction from product diagrams |
 | `manual-page-layout` | Dense IKEA-style page composition |
 | `zoom-inset-detail` | Circular and rectangular detail insets |
+| `prompt-crop-angle-control` | Classify uploaded image type, crop, and view angle |
 | `motion-arrow-language` | Normalized operation/arrow vocabulary |
 | `pedestal-joinery` | Wedge-tab hub, dado arms, leveling feet |
 | `top-mount-interface` | Round tabletop center mount details |
@@ -26,7 +31,10 @@ Domain knowledge packaged like [Agent Skills](https://github.com/YouMind-OpenLab
 | `grimsarbo-pedestal-fixture` | Gold fixture for the provided small red pedestal table |
 | `ikea-manual-style` | Line-art page conventions |
 | `renderer-primitive-library` | Semantic-to-SVG primitive mapping |
+| `parametric-cad-grounding` | CAD-like primitives, constraints, and interfaces |
+| `diagram-line-art-control` | Strict black-and-white line-art rules |
 | `manual-verifier` | Checks for source order, counts, insets, and vague actions |
+| `visual-regression-qa` | Browser screenshot checks against source manual pages |
 | `finish-color-match` | Primer + paint / powder-coat sourcing |
 
 ## Why many small skills?
@@ -46,6 +54,19 @@ ml/skills/my-skill/
 ```
 
 Register triggers in `ml/skills/manifest.json`, restart the ML backend.
+
+## Source Manual Fixtures
+
+Known source manuals can bypass generative redrawing and render exact SVG pages.
+For the current GRIMSARBO example, pages 6-12 from `diy.pdf` were extracted to
+`public/assets/manuals/grimsarbo/` and used by `src/grimsarboManual.js`.
+
+```bash
+ml/.venv/bin/python scripts/extract-manual-fixtures.py \
+  --pdf /Users/mingfanxie/Desktop/diy.pdf \
+  --pages 6-12 \
+  --out public/assets/manuals/grimsarbo
+```
 
 ## Cursor dev skills
 
