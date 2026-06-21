@@ -1,10 +1,6 @@
 // Parametric IKEA-style instruction manual for a round pedestal table.
-//
-// Instead of pasting photo cut-outs, this draws clean isometric line art
-// (white pages, black outlines, exploded steps, a parts/hardware page and a
-// finished view) procedurally from a small structured spec. The real object
-// colour from the photo is used to tint the faces, so the booklet looks like
-// the real table while staying a readable, IKEA-like manual.
+
+import { getPedestalJoinerySpec } from "./pedestalJoinery.js";
 
 const ISO_K = Math.cos(Math.PI / 6); // 0.8660 — horizontal iso factor
 
@@ -151,13 +147,11 @@ function crossBase(P, opts, fill, hideArm = -1) {
   const { armLen, armW, armH, hubR } = opts;
   const half = armW / 2;
   const arms = [
-    // [x0,y0,xs,ys] for each arm extending from the hub outward
-    () => isoBox(P, hubR, -half, 0, armLen, armW, armH, fill), // +x (front-right)
-    () => isoBox(P, -half, hubR, 0, armW, armLen, armH, fill), // +y (front-left / back)
-    () => isoBox(P, -armLen - hubR, -half, 0, armLen, armW, armH, fill), // -x
-    () => isoBox(P, -half, -armLen - hubR, 0, armW, armLen, armH, fill) // -y
+    () => isoBox(P, hubR, -half, 0, armLen, armW, armH, fill),
+    () => isoBox(P, -half, hubR, 0, armW, armLen, armH, fill),
+    () => isoBox(P, -armLen - hubR, -half, 0, armLen, armW, armH, fill),
+    () => isoBox(P, -half, -armLen - hubR, 0, armW, armLen, armH, fill)
   ];
-  // Draw far arms first (-x, -y), then near arms (+x, +y) so overlaps read right.
   const order = [2, 3, 1, 0];
   let out = "";
   for (const idx of order) {
@@ -165,6 +159,109 @@ function crossBase(P, opts, fill, hideArm = -1) {
     out += arms[idx]();
   }
   return out;
+}
+
+// Triangular wedge tab on the hub — the arm block slides onto this horizontally.
+function wedgeTab(P, cx, cy, z0, angleDeg, opts, fill) {
+  const { hubR, wedgeLen, wedgeSpread, height } = opts;
+  const f = faces(fill);
+  const a = (angleDeg * Math.PI) / 180;
+  const spread = ((wedgeSpread || 22) * Math.PI) / 180;
+  const inner = [cx + hubR * Math.cos(a), cy + hubR * Math.sin(a)];
+  const tip = [cx + (hubR + wedgeLen) * Math.cos(a), cy + (hubR + wedgeLen) * Math.sin(a)];
+  const left = [
+    cx + (hubR + wedgeLen * 0.92) * Math.cos(a - spread),
+    cy + (hubR + wedgeLen * 0.92) * Math.sin(a - spread)
+  ];
+  const right = [
+    cx + (hubR + wedgeLen * 0.92) * Math.cos(a + spread),
+    cy + (hubR + wedgeLen * 0.92) * Math.sin(a + spread)
+  ];
+  const z1 = z0 + height;
+  const bot = [inner, left, right].map(([x, y]) => P(x, y, z0));
+  const top = [inner, left, right].map(([x, y]) => P(x, y, z1));
+  const sideA = `<polygon points="${[bot[0], bot[1], top[1], top[0]].map(ptStr).join(" ")}" fill="${f.left}" stroke="${f.line}" stroke-width="${STROKE}" stroke-linejoin="round"/>`;
+  const sideB = `<polygon points="${[bot[0], bot[2], top[2], top[0]].map(ptStr).join(" ")}" fill="${f.right}" stroke="${f.line}" stroke-width="${STROKE}" stroke-linejoin="round"/>`;
+  const topFace = `<polygon points="${top.map(ptStr).join(" ")}" fill="${f.top}" stroke="${f.line}" stroke-width="${STROKE}" stroke-linejoin="round"/>`;
+  return sideA + sideB + topFace;
+}
+
+// Hub flange (short disc) with four wedge tabs at 0/90/180/270°.
+function hubWithWedges(P, cx, cy, z0, opts, fill, hideWedge = -1) {
+  const { hubR, hubH, wedgeLen, wedgeSpread, armH } = opts;
+  let out = discSolid(P, cx, cy, hubR + 0.15, z0, hubH, fill);
+  const angles = [0, 90, 180, 270];
+  for (let i = 0; i < angles.length; i += 1) {
+    if (i === hideWedge) continue;
+    out += wedgeTab(P, cx, cy, z0 + hubH, angles[i], { hubR, wedgeLen, wedgeSpread, height: armH * 0.85 }, fill);
+  }
+  return out;
+}
+
+// Foot arm block; innerR/outerR measured from centre along angleDeg.
+function armBlock(P, cx, cy, angleDeg, innerR, outerR, z0, armW, armH, fill, showNotch = false) {
+  const a = (angleDeg * Math.PI) / 180;
+  const px = -Math.sin(a);
+  const py = Math.cos(a);
+  const hw = armW / 2;
+  const iC = [cx + innerR * Math.cos(a), cy + innerR * Math.sin(a)];
+  const oC = [cx + outerR * Math.cos(a), cy + outerR * Math.sin(a)];
+  const corners = [
+    [iC[0] + px * hw, iC[1] + py * hw],
+    [oC[0] + px * hw, oC[1] + py * hw],
+    [oC[0] - px * hw, oC[1] - py * hw],
+    [iC[0] - px * hw, iC[1] - py * hw]
+  ];
+  const z1 = z0 + armH;
+  const bot = corners.map(([x, y]) => P(x, y, z0));
+  const top = corners.map(([x, y]) => P(x, y, z1));
+  const f = faces(fill);
+  let out = `<polygon points="${[...bot, ...top.slice().reverse()].map(ptStr).join(" ")}" fill="${f.right}" stroke="${f.line}" stroke-width="${STROKE}" stroke-linejoin="round"/>`;
+  out += `<polygon points="${top.map(ptStr).join(" ")}" fill="${f.top}" stroke="${f.line}" stroke-width="${STROKE}" stroke-linejoin="round"/>`;
+  if (showNotch) {
+    const nMid = P(iC[0], iC[1], z0 + armH * 0.55);
+    out += `<line x1="${nMid[0] - 8}" y1="${nMid[1]}" x2="${nMid[0] + 8}" y2="${nMid[1]}" stroke="#111" stroke-width="2.5"/>`;
+    out += `<text x="${nMid[0]}" y="${nMid[1] - 10}" font-family="Arial,sans-serif" font-size="9" fill="#333" text-anchor="middle">dado</text>`;
+  }
+  return out;
+}
+
+function drawArmsOnHub(P, cx, cy, z0, D, fill, hideArm = -1, showNotch = false) {
+  const inner = D.hubR + D.wedgeLen * 0.35;
+  const outer = D.hubR + D.wedgeLen + D.armLen;
+  const angles = [0, 90, 180, 270];
+  let out = "";
+  const order = [2, 3, 1, 0];
+  for (const idx of order) {
+    if (idx === hideArm) continue;
+    out += armBlock(P, cx, cy, angles[idx], inner, outer, z0, D.armW, D.armH, fill, showNotch && idx === 0);
+  }
+  return out;
+}
+
+// Column for upside-down assembly: wide flange on floor (z=0), stem up to hub.
+function upsideDownColumn(P, cx, cy, D, fill) {
+  const flangeR = D.coneTopR + 0.4;
+  let out = discSolid(P, cx, cy, flangeR, 0, 0.35, fill);
+  out += cylinder(P, cx, cy, D.stemR, 0.35, D.colH, fill);
+  return out;
+}
+
+// Floor mat under upside-down assembly (IKEA rug hint).
+function floorMat(P, cx, cy, w, d) {
+  const x0 = cx - w / 2;
+  const y0 = cy - d / 2;
+  const z = 0;
+  const pts = [
+    P(x0, y0, z),
+    P(x0 + w, y0, z),
+    P(x0 + w, y0 + d, z),
+    P(x0, y0 + d, z)
+  ];
+  return (
+    `<polygon points="${pts.map(ptStr).join(" ")}" fill="#e8e4dc" stroke="#111" stroke-width="${STROKE_THIN}"/>` +
+    `<line x1="${pts[3][0]}" y1="${pts[3][1]}" x2="${pts[3][0] + 18}" y2="${pts[3][1] + 6}" stroke="#999" stroke-width="1.2"/>`
+  );
 }
 
 // small foot glide
@@ -337,176 +434,204 @@ function defaultDims(plan, preferences) {
     topR: round2(clamp(diameter, 12, 48) / 2),
     topTh: 1.1,
     height: clamp(height, 14, 42),
+    colH: round2(clamp(height, 14, 42) * 0.55),
     stemR: 1.4,
     coneTopR: 3.2,
-    armLen: round2(clamp(diameter, 12, 48) / 2.4),
+    armLen: round2(clamp(diameter, 12, 48) / 2.8),
     armW: 1.7,
     armH: 1.7,
-    hubR: 1.6
+    hubR: 1.5,
+    hubH: 0.45,
+    wedgeLen: 1.1,
+    wedgeSpread: 24
   };
 }
 
 function generatePedestalManual(plan, preferences = {}, options = {}) {
   const D = defaultDims(plan, preferences);
-  const baseColor = options.baseColor || "#b23b34"; // painted base/column
-  const topColor = options.topColor || "#d8b486"; // plywood top
+  const baseColor = options.baseColor || "#b23b34";
+  const topColor = options.topColor || "#d8b486";
   const cx = 0;
   const cy = 0;
+  const joinery = getPedestalJoinerySpec(D, { base: baseColor });
+  const hubOpts = {
+    hubR: D.hubR,
+    hubH: D.hubH,
+    wedgeLen: D.wedgeLen,
+    wedgeSpread: D.wedgeSpread,
+    armH: D.armH
+  };
 
-  // shared geometry helpers given a projector
   const drawTop = (P, zLift = 0, withHole = true) =>
     discSolid(P, cx, cy, D.topR, D.height + zLift, D.topTh, topColor, { holeR: withHole ? 0.9 : 0 });
-  const drawColumn = (P, baseZ = 0) =>
-    pedestalColumn(
-      P,
-      cx,
-      cy,
-      {
-        stemR: D.stemR,
-        baseZ,
-        stemTopZ: baseZ + D.height - 4,
-        coneTopR: D.coneTopR,
-        coneTopZ: baseZ + D.height - 0.8
-      },
-      baseColor
-    );
-  const drawBase = (P, hideArm = -1) => crossBase(P, D, baseColor, hideArm);
-  const drawFeet = (P) =>
-    footGlide(P, D.armLen + D.hubR, 0, baseColor) +
-    footGlide(P, -D.armLen - D.hubR, 0, baseColor) +
-    footGlide(P, 0, D.armLen + D.hubR, baseColor) +
-    footGlide(P, 0, -D.armLen - D.hubR, baseColor);
+
+  // Finished (right-side-up): cross base on floor, column, top.
+  const drawFinished = (P) => {
+    let g = drawArmsOnHub(P, cx, cy, 0, D, baseColor);
+    g += hubWithWedges(P, cx, cy, D.armH * 0.2, hubOpts, baseColor);
+    g += cylinder(P, cx, cy, D.stemR, D.armH + D.hubH, D.height - 1.2, baseColor);
+    g += discSolid(P, cx, cy, D.coneTopR, D.height - 1.2, 0.9, baseColor);
+    return g;
+  };
+
+  const drawFeet = (P) => {
+    const outer = D.hubR + D.wedgeLen + D.armLen;
+    const pts = [
+      [outer, 0],
+      [-outer, 0],
+      [0, outer],
+      [0, -outer]
+    ];
+    return pts.map(([x, y]) => footGlide(P, x, y, baseColor)).join("");
+  };
 
   const pages = [];
 
-  // ---- Page 1: parts & hardware inventory ----------------------------------
+  // ---- Parts inventory -------------------------------------------------------
   {
     let g = "";
-    const P = projector(190, 360, 13);
     g += `<text x="${PAGE_W / 2}" y="64" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#111" text-anchor="middle">PARTS</text>`;
-    // top
     g += drawTop(projector(180, 150, 9), -D.height, true);
     g += countLabel("1x", 180, 235, 26);
-    // column + base preview
-    g += drawColumn(projector(470, 250, 8));
-    g += drawBase(projector(470, 300, 8));
+    const Pp = projector(470, 280, 9);
+    g += upsideDownColumn(Pp, cx, cy, D, baseColor);
+    g += hubWithWedges(Pp, cx, cy, D.colH, hubOpts, baseColor);
     g += countLabel("1x", 470, 360, 26);
-    g += countLabel("4x", 470, 392, 22);
-    // hardware row
+    g += countLabel("4x", 500, 392, 22);
     const hy = 560;
     g += `<line x1="60" y1="${hy - 70}" x2="${PAGE_W - 60}" y2="${hy - 70}" stroke="#ccc" stroke-width="1.5"/>`;
     g += `<text x="${PAGE_W / 2}" y="${hy - 84}" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#111" text-anchor="middle">HARDWARE</text>`;
-    g += buttonScrew(140, hy, 1.1) + countLabel("3x", 140, hy + 70) + smallCode("1154 61", 168, hy + 6);
-    g += buttonScrew(270, hy, 0.9) + countLabel("8x", 270, hy + 70) + smallCode("100 74126", 296, hy + 6);
-    g += thumbScrew(400, hy, 1.05) + countLabel("4x", 400, hy + 70) + smallCode("195 312", 426, hy + 6);
-    g += allenKey(520, hy - 60, 1) + countLabel("1x", 540, hy + 70) + smallCode("100 092", 590, hy - 4);
+    g += buttonScrew(140, hy, 1.1) + countLabel("4x", 140, hy + 70) + smallCode("M6 hub", 168, hy + 6);
+    g += buttonScrew(270, hy, 0.9) + countLabel("3x", 270, hy + 70) + smallCode("top plate", 296, hy + 6);
+    g += thumbScrew(400, hy, 1.05) + countLabel("4x", 400, hy + 70) + smallCode("195312", 426, hy + 6);
+    g += allenKey(520, hy - 60, 1) + countLabel("1x", 540, hy + 70) + smallCode("100092", 590, hy - 4);
     pages.push({
       id: "parts",
       number: null,
       title: "Parts & hardware",
-      caption: "Lay out every part and count the hardware before you start.",
+      caption: "Hub plate, four wedge blocks, four arm blanks, column core, top, and counted hardware.",
       view_box: { width: PAGE_W, height: PAGE_H },
       svg: pageFrame(g, { code: "AA-PEDESTAL-1" })
     });
   }
 
-  // ---- Page 2: build the cross base ---------------------------------------
+  // ---- Step 1: leveling feet into arm blocks ---------------------------------
   {
     let g = "";
-    const P = projector(330, 540, 18);
-    // column standing, one arm exploded out before insertion
-    g += drawColumn(P);
-    g += drawBase(P, 0); // hide +x arm
-    // exploded +x arm floating to the right
-    const Pexp = projector(330 + 150, 540 - 50, 18);
-    g += isoBox(Pexp, D.hubR, -D.armW / 2, 0, D.armLen, D.armW, D.armH, baseColor);
-    // motion arrow pushing arm into hub
-    g += curvedArrow(560, 470, 470, 520, 40);
-    g += countLabel("4x", 560, 440, 26);
+    const P = projector(280, 420, 22);
+    g += armBlock(P, cx, cy, 0, 0, D.armLen + 1.5, 0, D.armW, D.armH, baseColor, true);
+    g += countLabel("4x", 120, 200, 28);
+    const footPt = P(D.armLen * 0.35, 0, 0);
+    let inner = thumbScrew(490, 280, 1.35);
+    inner += `<path d="M490 240 q18 -28 0 -48" fill="none" stroke="#111" stroke-width="4" marker-end="url(#cw)"/>`;
+    inner += countLabel("1x", 490, 360, 22);
+    g +=
+      `<defs><marker id="cw" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#111"/></marker></defs>` +
+      zoomCircle(500, 290, 82, footPt[0], footPt[1], inner);
     pages.push({
-      id: "base",
+      id: "leveling-feet",
       number: 1,
-      title: "Build the cross base",
-      caption: "Slide all four arms into the central column hub.",
+      title: joinery.assembly_sequence[0].title,
+      caption: joinery.assembly_sequence[0].detail,
       view_box: { width: PAGE_W, height: PAGE_H },
       svg: pageFrame(g, { number: 1, code: "AA-PEDESTAL-2" })
     });
   }
 
-  // ---- Page 3: lock the base with screws ----------------------------------
+  // ---- Step 2: slide arms onto wedge tabs (upside-down hub) ------------------
   {
     let g = "";
-    const P = projector(300, 560, 17);
-    g += drawColumn(P);
-    g += drawBase(P);
-    // zoom into a hub screw with allen key
-    const focus = P(D.hubR + 0.5, 0, D.armH);
+    const P = projector(330, 520, 17);
+    g += floorMat(P, cx, cy - 2, 8, 5);
+    g += upsideDownColumn(P, cx, cy, D, baseColor);
+    g += hubWithWedges(P, cx, cy, D.colH, hubOpts, baseColor, 0);
+    g += drawArmsOnHub(P, cx, cy, D.colH, D, baseColor, 0);
+    const Pexp = projector(330 + 155, 520 - 35, 17);
+    g += armBlock(Pexp, cx, cy, 0, D.hubR + D.wedgeLen * 0.2, D.hubR + D.wedgeLen + D.armLen + 2, D.colH, D.armW, D.armH, baseColor);
+    g += straightArrow(565, 455, 455, 495, 18);
+    g += countLabel("4x", 565, 420, 26);
+    const wedgeFocus = P(D.hubR + D.wedgeLen * 0.5, 0, D.colH + D.armH * 0.5);
     let inner = "";
-    inner += buttonScrew(470, 250, 1.4);
-    inner += allenKey(520, 215, 1.1);
-    inner += straightArrow(470, 200, 470, 235, 14);
-    g += zoomCircle(490, 255, 78, focus[0], focus[1], inner);
-    g += countLabel("4x", 490, 360, 24);
+    inner += wedgeTab(projector(500, 280, 14), cx, cy, 0, 0, hubOpts, baseColor);
+    inner += `<text x="500" y="360" font-family="Arial,sans-serif" font-size="11" fill="#333" text-anchor="middle">wedge tab → dado</text>`;
+    g += zoomCircle(510, 300, 72, wedgeFocus[0], wedgeFocus[1], inner);
     pages.push({
-      id: "base-lock",
+      id: "wedge-slide",
       number: 2,
-      title: "Tighten the base",
-      caption: "Drive a screw into each arm and tighten with the hex key.",
+      title: joinery.assembly_sequence[1].title,
+      caption: joinery.assembly_sequence[1].detail,
       view_box: { width: PAGE_W, height: PAGE_H },
       svg: pageFrame(g, { number: 2, code: "AA-PEDESTAL-3" })
     });
   }
 
-  // ---- Page 4: mounting plate under the top -------------------------------
+  // ---- Step 3: bolt wedges to hub --------------------------------------------
   {
     let g = "";
-    // top shown upside down (flat), plate + 3 screws coming in
-    const P = projector(330, 430, 12);
-    g += discSolid(P, cx, cy, D.topR, 0, D.topTh, topColor, { holeR: 0.9 });
-    // mounting plate above (a small disc) descending
-    const Pp = projector(330, 250, 12);
-    g += discSolid(Pp, cx, cy, D.coneTopR + 0.6, 0, 0.4, shade(baseColor, -0.1));
-    g += curvedArrow(330, 300, 330, 380, 0);
-    // screws callout
-    g += buttonScrew(520, 250, 1.1) + countLabel("3x", 520, 320);
-    g += allenKey(580, 200, 0.9);
+    const P = projector(300, 540, 16);
+    g += floorMat(P, cx, cy - 2, 8, 5);
+    g += upsideDownColumn(P, cx, cy, D, baseColor);
+    g += hubWithWedges(P, cx, cy, D.colH, hubOpts, baseColor);
+    g += drawArmsOnHub(P, cx, cy, D.colH, D, baseColor);
+    const focus = P(D.hubR + 0.3, 0.4, D.colH + D.hubH);
+    let inner = buttonScrew(470, 255, 1.35) + allenKey(525, 215, 1.05);
+    inner += straightArrow(470, 205, 470, 240, 12);
+    g += zoomCircle(495, 265, 78, focus[0], focus[1], inner);
+    g += countLabel("4x", 495, 370, 24);
     pages.push({
-      id: "plate",
+      id: "hub-lock",
       number: 3,
-      title: "Fix the mounting plate",
-      caption: "Turn the top upside down and screw the plate onto its centre.",
+      title: joinery.assembly_sequence[2].title,
+      caption: joinery.assembly_sequence[2].detail,
       view_box: { width: PAGE_W, height: PAGE_H },
       svg: pageFrame(g, { number: 3, code: "AA-PEDESTAL-4" })
     });
   }
 
-  // ---- Page 5: join top to base -------------------------------------------
+  // ---- Step 4: mounting plate under top --------------------------------------
   {
     let g = "";
-    const P = projector(330, 660, 13);
-    g += drawColumn(P);
-    g += drawBase(P);
-    g += drawFeet(P);
-    // top floating above, descending (drawn at z=0 via the -height offset)
-    g += drawTop(projector(330, 200, 13), -D.height, true);
-    g += straightArrow(330, 300, 330, 360, 22);
-    g += countLabel("1x", 430, 250, 26);
+    const P = projector(330, 430, 12);
+    g += discSolid(P, cx, cy, D.topR, 0, D.topTh, topColor, { holeR: 0.9 });
+    const Pp = projector(330, 250, 12);
+    g += discSolid(Pp, cx, cy, D.coneTopR + 0.5, 0, 0.35, shade(baseColor, -0.08));
+    g += straightArrow(330, 295, 330, 375, 20);
+    g += buttonScrew(520, 250, 1.1) + countLabel("3x", 520, 320);
+    g += allenKey(580, 200, 0.9);
     pages.push({
-      id: "join",
+      id: "plate",
       number: 4,
-      title: "Set the top on the base",
-      caption: "Lower the top onto the column and press until it seats.",
+      title: joinery.assembly_sequence[3].title,
+      caption: joinery.assembly_sequence[3].detail,
       view_box: { width: PAGE_W, height: PAGE_H },
       svg: pageFrame(g, { number: 4, code: "AA-PEDESTAL-5" })
     });
   }
 
-  // ---- Page 6: finished ----------------------------------------------------
+  // ---- Step 5: set top on column ---------------------------------------------
+  {
+    let g = "";
+    const P = projector(330, 660, 13);
+    g += drawFinished(P);
+    g += drawFeet(P);
+    g += drawTop(projector(330, 200, 13), -D.height, true);
+    g += straightArrow(330, 295, 330, 355, 22);
+    g += countLabel("1x", 430, 245, 26);
+    pages.push({
+      id: "join",
+      number: 5,
+      title: joinery.assembly_sequence[4].title,
+      caption: joinery.assembly_sequence[4].detail,
+      view_box: { width: PAGE_W, height: PAGE_H },
+      svg: pageFrame(g, { number: 5, code: "AA-PEDESTAL-6" })
+    });
+  }
+
+  // ---- Finished --------------------------------------------------------------
   {
     let g = "";
     const P = projector(330, 540, 15);
-    g += drawColumn(P);
-    g += drawBase(P);
+    g += drawFinished(P);
     g += drawFeet(P);
     g += drawTop(P, 0, true);
     g += `<text x="${PAGE_W / 2}" y="760" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#111" text-anchor="middle">DONE</text>`;
@@ -514,20 +639,19 @@ function generatePedestalManual(plan, preferences = {}, options = {}) {
       id: "done",
       number: null,
       title: "Finished",
-      caption: "Your round pedestal table is ready.",
+      caption: "Flip the base upright if you assembled upside-down; level with the four feet.",
       view_box: { width: PAGE_W, height: PAGE_H },
-      svg: pageFrame(g, { code: "AA-PEDESTAL-6" })
+      svg: pageFrame(g, { code: "AA-PEDESTAL-7" })
     });
   }
 
-  // structured parts list (for the materials cross-reference / inventory tray)
   const parts = [
     { id: "top", label: "Round table top", kind: "round_top", material_name: "plywood round top", cut_size: `${round2(D.topR * 2)} in dia`, quantity: 1 },
-    { id: "column", label: "Central column", kind: "column", material_name: "turned/painted post", cut_size: `${D.height} in`, quantity: 1 },
-    { id: "arm", label: "Cross-base arm", kind: "arm", material_name: "hardwood arm", cut_size: `${D.armLen} in`, quantity: 4 },
-    { id: "plate", label: "Mounting plate", kind: "plate", material_name: "steel plate", cut_size: "center", quantity: 1 },
-    { id: "screw_button", label: "Button screws", kind: "fastener_set", material_name: "button head screws", cut_size: "with hex key", quantity: 11 },
-    { id: "thumb_screw", label: "Leveling thumb screws", kind: "fastener_set", material_name: "thumb screws", cut_size: "adjust feet", quantity: 4 }
+    { id: "hub", label: "Hub plate + wedge blocks", kind: "hub", material_name: "3/4 in plywood hub", cut_size: "6 in disc + 4 wedges", quantity: 1 },
+    { id: "column", label: "Column core + wrap", kind: "column", material_name: "steel pipe + MDF wrap", cut_size: `${D.height} in`, quantity: 1 },
+    { id: "arm", label: "Foot arm (dadoed)", kind: "arm", material_name: "2x2 hardwood", cut_size: `${D.armLen} in`, quantity: 4 },
+    { id: "plate", label: "Mounting plate", kind: "plate", material_name: "steel plate", cut_size: "6 in", quantity: 1 },
+    { id: "leveler", label: "Leveling feet", kind: "fastener_set", material_name: "1/4-20 leveling feet", cut_size: "4 pack", quantity: 4 }
   ];
 
   const frames = pages.map((p, i) => ({
@@ -539,13 +663,15 @@ function generatePedestalManual(plan, preferences = {}, options = {}) {
   }));
 
   return {
-    version: "1.0",
+    version: "1.1",
     renderer: "ikea_line_art_v1",
     archetype: "pedestal_round_table",
     source: "parametric_vector",
     source_note:
-      "Clean isometric line-art manual generated parametrically from the detected pedestal-table structure, tinted with the real object colour.",
+      "Isometric manual with wedge-tab hub joinery (structured carpentry knowledge, not photo collage). Faces tinted from the reference colour.",
     colors: { base: baseColor, top: topColor },
+    joinery: joinery.connection,
+    finish_plan: joinery.finish,
     dims: D,
     view_box: { width: PAGE_W, height: PAGE_H },
     pages,

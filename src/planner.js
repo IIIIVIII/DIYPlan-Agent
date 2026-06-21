@@ -1,5 +1,6 @@
 import { buildStoreLinks, catalogContext } from "./materialCatalog.js";
 import { generatePedestalManual } from "./pedestalManual.js";
+import { enrichPedestalPlan } from "./pedestalJoinery.js";
 import { callOpenAIPlan } from "./openai.js";
 import { callLocalPlan, callLocalUnderstand, checkLocalBackend, localBackendConfigured } from "./localBackend.js";
 import { evaluatePlanQuality } from "./evaluator.js";
@@ -317,6 +318,17 @@ function verifyPlan(plan, preferences, options = {}) {
 
   if (materialCost > next.estimated_total_cost_usd.high * 1.35) {
     notes.add("Material line items exceed the high-end estimate; cost estimate should be recalibrated.");
+  }
+
+  const hint = `${String(next.detected_object?.category || preferences.furnitureType || "")} ${String(preferences.furnitureType || "")}`.toLowerCase();
+  if (/round|dining|pedestal|bistro|bar table|cafe|drum/.test(hint)) {
+    const baseColor = normalizeHexColor(options.dominantColor);
+    enrichPedestalPlan(next, preferences, { base: baseColor });
+    if (baseColor) {
+      notes.add(`Reference colour ${baseColor}: buy primer + colour-matched paint (or powder-coated pipe) — see materials list.`);
+    } else {
+      notes.add("Painted pedestal base: add primer and colour coats — bare wood will not match a factory finish.");
+    }
   }
 
   next.evaluation.verifier_notes = Array.from(notes);
@@ -891,7 +903,7 @@ function findMaterialName(plan, needle) {
 
 function fallbackPlan(preferences) {
   const type = preferences.furnitureType && preferences.furnitureType !== "auto" ? preferences.furnitureType : "side table";
-  if (/\b(round|dining)\b/i.test(type)) return roundTablePlan(preferences, type);
+  if (/\b(round|dining|pedestal|bistro)\b/i.test(type)) return pedestalTablePlan(preferences, type);
 
   return {
     project: {
@@ -1025,6 +1037,71 @@ function fallbackPlan(preferences) {
       risk_level: "low",
       missing_inputs: [],
       verifier_notes: ["Fallback plan is generic because no cloud model result was used."]
+    }
+  };
+}
+
+function pedestalTablePlan(preferences, type) {
+  const dimText = String(preferences.targetSize || "18 in diameter, 22 in tall");
+  const nums = (dimText.match(/\d+(\.\d+)?/g) || []).map(Number);
+  let diameter = nums.find((n) => n >= 12 && n <= 60) || 18;
+  let height = nums.find((n) => n >= 14 && n <= 45) || 22;
+  if (/cm/i.test(dimText)) {
+    diameter = Math.round((diameter / 2.54) * 10) / 10;
+    height = Math.round((height / 2.54) * 10) / 10;
+  }
+
+  return {
+    project: {
+      title: "Round Pedestal Table Build",
+      summary:
+        "A simplified round pedestal table with wedge-tab cross base, steel-or-MDF column, and colour-matched paint on the base.",
+      inspired_by_style: "round top with single pedestal column and four-arm cross base",
+      recommended_scope:
+        "Build a practical inspired-by pedestal table using a hub plate with wedge tabs — not loose blocks screwed into a tube."
+    },
+    detected_object: {
+      category: type,
+      structure: "pedestal column with wedge-tab cross base",
+      visible_parts: ["round tabletop", "central column", "cross-base arms", "hub wedge tabs", "leveling feet"],
+      likely_materials: ["plywood top", "2x2 arms", "steel pipe column", "MDF wrap", "primer and colour-matched paint"],
+      confidence: preferences.imageDataUrl ? 0.72 : 0.4
+    },
+    assumptions: [
+      "The photo hides back-side joinery; this plan uses a wedge-tab hub common on commercial pedestal tables.",
+      "A painted base requires primer + colour coats — bare lumber will not match a red reference.",
+      "Confirm column height and top diameter in your space before cutting pipe or MDF."
+    ],
+    difficulty: preferences.skillLevel === "beginner" ? "intermediate" : preferences.skillLevel || "intermediate",
+    estimated_total_cost_usd: {
+      low: 95,
+      high: 220,
+      notes: "Includes lumber, pipe, hardware, primer, and colour-matched paint quart."
+    },
+    dimensions: {
+      width_in: diameter,
+      depth_in: diameter,
+      height_in: height,
+      confidence: 0.55,
+      notes: preferences.targetSize || "Adjust to your room; defaults are for a small bistro table."
+    },
+    materials: [],
+    tools: [
+      { name: "drill/driver", required: true, notes: "Pilot holes and driver bits for inserts and screws." },
+      { name: "router or table saw", required: true, notes: "Dado the arm blocks for wedge tabs." },
+      { name: "clamps", required: true, notes: "Glue MDF column wrap while paint dries." }
+    ],
+    steps: [],
+    safety_checks: [
+      "Pedestal tables tip if the top is heavy or the base is too narrow — keep arm length proportional to the top diameter.",
+      "Use ventilation when spraying primer and paint."
+    ],
+    routing_notes: ["Pedestal joinery and finish sourcing are applied from structured carpentry rules."],
+    evaluation: {
+      buildability_score: 74,
+      risk_level: "low",
+      missing_inputs: [],
+      verifier_notes: ["Fallback pedestal plan uses wedge-tab hub joinery."]
     }
   };
 }

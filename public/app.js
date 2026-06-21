@@ -890,7 +890,8 @@ function renderSteps(steps, instructionModel) {
 function renderIkeaManual(model) {
   const parts = model.parts || [];
   document.querySelector("#instruction-mode").textContent = humanizeRenderer(model.renderer || "line art");
-  document.querySelector("#instruction-note").textContent = model.source_note || "";
+  const finishNotes = model.finish_plan?.notes?.join(" ") || "";
+  document.querySelector("#instruction-note").textContent = [model.source_note, finishNotes].filter(Boolean).join(" ");
   document.querySelector("#parts-tray").innerHTML = `
     <div class="parts-tray-header">
       <span>${parts.length} parts</span>

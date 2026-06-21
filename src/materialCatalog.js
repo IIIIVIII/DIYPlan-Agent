@@ -45,6 +45,26 @@ export const materialCatalog = [
     notes: "Helpful for tables on uneven floors."
   },
   {
+    category: "finish",
+    query: "multi surface primer quart",
+    notes: "Required before painting MDF, plywood edges, or bare wood to match a factory colour."
+  },
+  {
+    category: "finish",
+    query: "red semi gloss interior latex paint quart",
+    notes: "For colour-matching a painted pedestal base; verify with a sample pot first."
+  },
+  {
+    category: "hardware",
+    query: "3 inch steel pipe",
+    notes: "Structural core for a pedestal column; can be powder-coated instead of painted."
+  },
+  {
+    category: "hardware",
+    query: "adjustable leveling foot 1/4-20",
+    notes: "Level a cross-base pedestal on uneven floors."
+  },
+  {
     category: "tool",
     query: "clamp set woodworking",
     notes: "Keeps panels square during assembly."
