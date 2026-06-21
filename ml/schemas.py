@@ -149,9 +149,11 @@ class Perception(BaseModel):
     """
 
     category: str
+    structure: str = ""
     visible_parts: List[str]
     likely_materials: List[str]
     style: str
     approx_dimensions_note: str
+    finish_note: str = ""
     risk_level: RiskLevel
     confidence: float = Field(ge=0, le=1)

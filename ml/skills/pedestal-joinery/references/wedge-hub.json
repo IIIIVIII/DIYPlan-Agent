@@ -1,0 +1,22 @@
+{
+  "wedge_tab_hub": {
+    "hub_diameter_in": "6-8",
+    "wedge_count": 4,
+    "wedge_angle_deg": 45,
+    "arm_dado_depth_in": 0.5,
+    "arm_dado_clearance_in": 0.0625,
+    "lock_fastener": "M6x40 bolt + washer per wedge",
+    "assembly_orientation": "column upside-down on blanket"
+  },
+  "leveling_foot": {
+    "insert": "1/4-20 threaded insert",
+    "hardware": "adjustable leveling foot (thumb-screw style)",
+    "quantity": 4,
+    "install": "from underside of arm block before final paint"
+  },
+  "anti_patterns": [
+    "four arms inserted into center tube without wedge tabs",
+    "wood screws only with no mechanical key between arm and hub",
+    "butt joint with no dado or shoulder stop"
+  ]
+}

@@ -40,19 +40,30 @@ def _live_response(preferences: dict, image_data_urls, stages: List[dict], start
     from . import models
     from .rag.store import get_store
     from . import prompts
+    from .skills.loader import skills_for_request
 
     image_paths = [
         p
         for p in (models.data_url_to_tempfile(u) for u in image_data_urls)
         if p
     ]
-    # The first/clearest photo is used for the 1:1 part cutouts; all photos
-    # feed perception so more angles give more detail.
     image_path = image_paths[0] if image_paths else None
+
+    # Stage 0: match domain skills (joinery, manual style, finish) from preferences
+    t0 = time.perf_counter()
+    pre_skills = skills_for_request(None, preferences)
+    stages.append(
+        _stage(
+            "skill-match",
+            "local-skills",
+            f"Loaded skills: {', '.join(pre_skills['ids']) or 'none'}.",
+            t0,
+        )
+    )
 
     # Stage 1: perception (VLM, multi-image when several photos are uploaded)
     t0 = time.perf_counter()
-    perception = _run_perception(models, prompts, preferences, image_paths)
+    perception = _run_perception(models, prompts, preferences, image_paths, pre_skills["context"])
     stages.append(
         _stage(
             "image-understanding",
@@ -68,9 +79,11 @@ def _live_response(preferences: dict, image_data_urls, stages: List[dict], start
     retrieved = get_store().retrieve(query, top_k=config.RETRIEVAL_TOP_K)
     stages.append(_stage("knowledge-retrieval", config.EMBED_MODEL, f"Retrieved {len(retrieved)} DIY knowledge snippets.", t0))
 
+    post_skills = skills_for_request(perception, preferences)
+
     # Stage 3: planning (constrained text LLM if configured, else VLM)
     t0 = time.perf_counter()
-    plan_prompt = prompts.planner_prompt(preferences, perception, retrieved)
+    plan_prompt = prompts.planner_prompt(preferences, perception, retrieved, post_skills["context"])
     plan, plan_model = _run_planning(models, plan_prompt, image_path, preferences, perception)
     stages.append(_stage("plan-generation", plan_model, "Structured plan generated and schema-validated.", t0))
 
@@ -96,6 +109,7 @@ def _live_response(preferences: dict, image_data_urls, stages: List[dict], start
         "retrieval": retrieved,
         "part_cutouts": part_cutouts,
         "dominant_color": tint,
+        "skills": post_skills["ids"],
         "stages": stages,
         "metrics": {
             "model": config.model_label(),
@@ -153,10 +167,10 @@ def _group_cutouts_by_role(seg_template: dict, cut_map: dict) -> dict:
     return groups
 
 
-def _run_perception(models, prompts, preferences: dict, image_paths) -> dict:
+def _run_perception(models, prompts, preferences: dict, image_paths, skill_context: str = "") -> dict:
     if isinstance(image_paths, str) or image_paths is None:
         image_paths = [image_paths] if image_paths else []
-    prompt = prompts.perception_prompt(preferences)
+    prompt = prompts.perception_prompt(preferences, skill_context)
     text = models.vlm_generate(prompt, image_paths if image_paths else None)
     data = _parse_json(text)
     if data is not None:

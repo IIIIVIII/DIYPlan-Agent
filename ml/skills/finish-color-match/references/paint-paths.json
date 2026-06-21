@@ -1,0 +1,20 @@
+{
+  "painted_red": {
+    "detect": "high saturation, red dominant channel",
+    "materials": [
+      { "name": "Multi-surface primer quart", "store_query": "multi surface primer quart" },
+      { "name": "Red semi-gloss interior latex quart", "store_query": "red semi gloss interior latex paint quart" },
+      { "name": "Red paint sample pot", "store_query": "red paint sample pot interior" }
+    ],
+    "alternative": {
+      "label": "Powder-coated steel pipe column",
+      "store_query": "3 inch steel pipe"
+    }
+  },
+  "natural_wood": {
+    "materials": [
+      { "name": "Wood stain sample", "store_query": "wood stain sample pack" },
+      { "name": "Water-based poly satin", "store_query": "water based polyurethane satin" }
+    ]
+  }
+}

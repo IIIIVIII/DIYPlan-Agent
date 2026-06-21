@@ -664,7 +664,7 @@ function generatePedestalManual(plan, preferences = {}, options = {}) {
 
   return {
     version: "1.1",
-    renderer: "ikea_line_art_v1",
+    renderer: "ikea_line_art_v1.1",
     archetype: "pedestal_round_table",
     source: "parametric_vector",
     source_note:

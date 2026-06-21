@@ -24,27 +24,35 @@ PLANNER_SYSTEM = (
 )
 
 
-def perception_prompt(preferences: dict) -> str:
+def perception_prompt(preferences: dict, skill_context: str = "") -> str:
     schema_hint = {
         "category": "string (e.g. side table, round dining table, bookshelf)",
+        "structure": "string (e.g. pedestal column with wedge-tab cross base, four-leg apron table)",
         "visible_parts": ["string"],
         "likely_materials": ["string"],
         "style": "string",
         "approx_dimensions_note": "string",
+        "finish_note": "string (painted vs natural wood vs metal — visually supported only)",
         "risk_level": "low | medium | high",
         "confidence": "number 0..1",
     }
+    skills_block = ""
+    if skill_context:
+        skills_block = f"\nDomain skills (apply when relevant):\n{skill_context}\n\n"
     return (
         f"{PERCEPTION_SYSTEM}\n\n"
         f"User says the furniture type may be: {preferences.get('furnitureType') or 'unknown'}.\n"
         "Identify the object, its visible structural parts, likely materials, "
-        "style, a rough size note, and a safety risk level.\n\n"
+        "style, a rough size note, finish type (paint vs wood vs metal), and a safety risk level.\n"
+        f"{skills_block}"
         "Return JSON exactly in this shape:\n"
         f"{json.dumps(schema_hint, indent=2)}"
     )
 
 
-def planner_prompt(preferences: dict, perception: dict, retrieved: List[dict]) -> str:
+def planner_prompt(
+    preferences: dict, perception: dict, retrieved: List[dict], skill_context: str = ""
+) -> str:
     knowledge = "\n".join(f"- {item['text']}" for item in retrieved) or "- (none)"
     perception_text = json.dumps(perception, indent=2) if perception else "(no perception stage)"
     constraints = {
@@ -56,6 +64,12 @@ def planner_prompt(preferences: dict, perception: dict, retrieved: List[dict]) -
         "zipcode": preferences.get("zipcode") or "not provided",
     }
     schema_hint = _plan_schema_hint()
+    skills_block = ""
+    if skill_context:
+        skills_block = (
+            "\nDomain skills (MUST follow for joinery, manual steps, and finish sourcing):\n"
+            f"{skill_context}\n\n"
+        )
     return (
         f"{PLANNER_SYSTEM}\n\n"
         "Image understanding result:\n"
@@ -63,7 +77,8 @@ def planner_prompt(preferences: dict, perception: dict, retrieved: List[dict]) -
         "User constraints:\n"
         f"{json.dumps(constraints, indent=2)}\n\n"
         "Relevant DIY knowledge (use it; do not contradict it):\n"
-        f"{knowledge}\n\n"
+        f"{knowledge}\n"
+        f"{skills_block}"
         "Requirements:\n"
         "- Produce a safer, simplified, inspired-by DIY version.\n"
         "- Prefer low-risk categories (side tables, coffee tables, shelves, nightstands, round tables).\n"

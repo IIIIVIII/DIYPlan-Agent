@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "skills": [
+    {
+      "id": "pedestal-joinery",
+      "title": "Pedestal table wedge-tab joinery",
+      "triggers": ["pedestal", "round", "dining", "bistro", "drum", "cross base", "column"],
+      "path": "pedestal-joinery/SKILL.md"
+    },
+    {
+      "id": "ikea-manual-style",
+      "title": "IKEA-style assembly manual conventions",
+      "triggers": ["manual", "instruction", "assembly", "ikea", "line art"],
+      "path": "ikea-manual-style/SKILL.md"
+    },
+    {
+      "id": "finish-color-match",
+      "title": "Paint and colour matching for factory finishes",
+      "triggers": ["paint", "red", "color", "colour", "finish", "primer", "laminate"],
+      "path": "finish-color-match/SKILL.md"
+    }
+  ]
+}
