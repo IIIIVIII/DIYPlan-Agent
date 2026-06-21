@@ -1337,6 +1337,18 @@ code {
   opacity: 0.18;
 }
 
+/* Real part cut 1:1 out of the uploaded photo (GroundingDINO + SAM2). */
+.manual-part-cutout image {
+  filter: drop-shadow(0 2px 3px rgba(20, 12, 4, 0.28));
+}
+
+.manual-cutout-outline {
+  fill: none;
+  stroke: #d5ff57;
+  stroke-width: 3;
+  stroke-dasharray: 6 5;
+}
+
 .manual-part.highlight rect,
 .manual-part.highlight polygon,
 .manual-part.highlight > path:not(.manual-grain),

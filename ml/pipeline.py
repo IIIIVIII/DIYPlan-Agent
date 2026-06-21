@@ -58,15 +58,20 @@ def _live_response(preferences: dict, image_data_url: str, stages: List[dict], s
     plan, plan_model = _run_planning(models, plan_prompt, image_path)
     stages.append(_stage("plan-generation", plan_model, "Structured plan generated and schema-validated.", t0))
 
-    # Stage 4: instruction manual (semantic spec -> deterministic layout)
+    # Stage 4: instruction manual. We keep the original IKEA-style template
+    # layout (deterministic, readable) and only swap each synthetic shape for
+    # the *real part cut 1:1 out of the photo* via GroundingDINO + SAM2.
     t0 = time.perf_counter()
-    spec = _run_instruction(models, prompts, preferences, perception, image_path)
+    spec = _fallback_instruction_spec(perception, preferences)
     instruction_model = build_instruction_model(spec)
+    n_cut = _apply_real_cutouts(instruction_model, image_path)
     stages.append(
         _stage(
             "instruction-manual",
-            config.VLM_MODEL,
-            f"Generated {len(spec.parts)} color-coded parts across {len(spec.steps)} assembly steps.",
+            f"{config.GROUNDING_MODEL.split('/')[-1]}+sam2",
+            f"Template manual with {n_cut} real parts cut 1:1 from the photo."
+            if n_cut
+            else "Template manual (segmentation found no clean parts; using shapes).",
             t0,
         )
     )
@@ -86,20 +91,46 @@ def _live_response(preferences: dict, image_data_url: str, stages: List[dict], s
     }
 
 
-def _run_instruction(models, prompts, preferences, perception, image_path) -> InstructionSpec:
-    prompt = prompts.instruction_prompt(preferences, perception)
-    for attempt in range(config.JSON_REPAIR_RETRIES + 1):
-        text = models.vlm_generate(
-            prompt if attempt == 0 else _repair_prompt(prompt, "Invalid JSON or schema."),
-            image_path,
+def _apply_real_cutouts(instruction_model: dict, image_path: Optional[str]) -> int:
+    """Replace synthetic part shapes with real parts cut out of the photo.
+
+    Mutates `instruction_model["parts"]` in place: parts we can segment get an
+    `image` (transparent PNG data URL) drawn by the renderer; parts we cannot
+    segment keep their shape but are tinted with the photo's dominant color so
+    the whole manual reads in the real object's palette. Returns the cut count.
+    """
+    if not image_path:
+        return 0
+    try:
+        from . import segmentation
+    except Exception as exc:  # torch/transformers not available
+        print(f"[pipeline] segmentation unavailable: {exc}")
+        return 0
+
+    parts = instruction_model.get("parts", [])
+    spec_parts = [{"id": p["id"], "role": p.get("role", "")} for p in parts]
+    cutouts = segmentation.cutouts_for_parts(image_path, spec_parts)
+    tint = segmentation.dominant_color(image_path)
+
+    count = 0
+    for part in parts:
+        cut = cutouts.get(part["id"])
+        if cut:
+            part["image"] = cut["image"]
+            part["img_w"] = cut["img_w"]
+            part["img_h"] = cut["img_h"]
+            part["has_cutout"] = True
+            count += 1
+        elif tint:
+            part["color"] = tint
+    if count:
+        instruction_model["source"] = "photo_cutout"
+        instruction_model["source_note"] = (
+            "IKEA-style template layout; each part shown is segmented 1:1 from "
+            "the uploaded photo (GroundingDINO + SAM2). Parts not visible in the "
+            "photo keep a simplified shape tinted to the object's color."
         )
-        data = _parse_json(text)
-        if data is not None:
-            try:
-                return InstructionSpec(**data)
-            except Exception:
-                continue
-    return _fallback_instruction_spec(perception, preferences)
+    return count
 
 
 def _run_perception(models, prompts, preferences: dict, image_path: Optional[str]) -> dict:

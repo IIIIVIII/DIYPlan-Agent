@@ -201,6 +201,7 @@ def _render_parts(spec: InstructionSpec, assembled: Dict[str, dict]) -> List[dic
             {
                 "id": part.id,
                 "label": part.label,
+                "role": part.role,
                 "kind": _kind_for(part),
                 "material_name": part.material_name,
                 "cut_size": part.cut_size,

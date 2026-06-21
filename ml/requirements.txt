@@ -20,6 +20,13 @@ mlx-lm>=0.31.0
 # Outlines guarantees schema-valid JSON for the mlx-lm text path.
 outlines>=1.0
 
+# --- Part segmentation (cut real parts 1:1 out of the photo) ---
+# GroundingDINO (text->box) + SAM2 (box->mask) ship inside transformers.
+# torch/torchvision run on Metal (MPS) on Apple Silicon.
+transformers>=4.57
+torch>=2.4
+torchvision>=0.19
+
 # --- RAG: embeddings + vector store ---
 # bge-small-en-v1.5 works out of the box (no trust_remote_code), ~130 MB.
 sentence-transformers>=3.0

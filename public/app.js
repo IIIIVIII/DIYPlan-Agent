@@ -817,6 +817,22 @@ function drawInstructionPart(part, placement, state) {
     .join(" ");
   const colorAttrs = colorAttrsFor(part, state);
 
+  if (part.image) {
+    const x = safeNumber(placement.x);
+    const y = safeNumber(placement.y);
+    const width = safeNumber(placement.width, 120);
+    const height = safeNumber(placement.height, 80);
+    const outline = state.highlight
+      ? `<rect class="manual-cutout-outline" x="${x - 2}" y="${y - 2}" width="${width + 4}" height="${height + 4}" rx="8"></rect>`
+      : "";
+    return `
+      <g class="${classes} manual-part-cutout">
+        <image href="${part.image}" x="${x}" y="${y}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet"></image>
+        ${outline}
+      </g>
+    `;
+  }
+
   if (part.kind === "fastener_set") {
     return (placement.points || [])
       .map(([x, y]) => `<circle class="${classes}" cx="${safeNumber(x)}" cy="${safeNumber(y)}" r="${state.compact ? 5 : 7}"></circle>`)
