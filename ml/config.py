@@ -57,8 +57,10 @@ GROUNDING_MODEL = os.environ.get(
 SAM2_MODEL = os.environ.get("DIYPLAN_SAM2_MODEL", "facebook/sam2.1-hiera-small")
 SEG_BOX_THRESHOLD = float(os.environ.get("DIYPLAN_SEG_BOX_THRESHOLD", "0.25"))
 SEG_TEXT_THRESHOLD = float(os.environ.get("DIYPLAN_SEG_TEXT_THRESHOLD", "0.2"))
-# Set to 0 to disable segmentation (manual falls back to synthetic shapes).
-SEG_ENABLED = _flag("DIYPLAN_SEG_ENABLED", default=True)
+# The manual is now drawn as parametric line art (no photo cut-outs), so the
+# heavy GroundingDINO + SAM2 segmentation is OFF by default. Set to 1 to re-enable
+# experimental 1:1 photo cut-outs.
+SEG_ENABLED = _flag("DIYPLAN_SEG_ENABLED", default=False)
 
 # Embedding model for RAG. bge-small-en-v1.5 is tiny and needs no remote code.
 # Alternatives: "nomic-ai/nomic-embed-text-v1.5" (trust_remote_code) or

@@ -96,7 +96,7 @@ const I18N = {
     "loading.text": "Running multimodal planning workflow...",
     "score.buildability": "Buildability",
     "section.research": "Research Evaluation",
-    "manual.eyebrow": "Real parts from your photo",
+    "manual.eyebrow": "Clean line-art build manual",
     "section.manual": "Instruction Manual",
     "section.materials": "Materials",
     "section.steps": "Build Steps",
@@ -159,7 +159,7 @@ const I18N = {
     "loading.text": "正在运行多模态规划流程...",
     "score.buildability": "可制作性",
     "section.research": "研究评估",
-    "manual.eyebrow": "来自你照片的真实部件",
+    "manual.eyebrow": "清晰的线稿装配说明书",
     "section.manual": "装配说明书",
     "section.materials": "材料清单",
     "section.steps": "制作步骤",
@@ -887,7 +887,38 @@ function renderSteps(steps, instructionModel) {
     .join("");
 }
 
+function renderIkeaManual(model) {
+  const parts = model.parts || [];
+  document.querySelector("#instruction-mode").textContent = humanizeRenderer(model.renderer || "line art");
+  document.querySelector("#instruction-note").textContent = model.source_note || "";
+  document.querySelector("#parts-tray").innerHTML = `
+    <div class="parts-tray-header">
+      <span>${parts.length} parts</span>
+      <strong>Cut + assembly inventory</strong>
+    </div>
+    <div class="parts-inventory-grid">
+      ${parts.map((part) => renderInventoryPart(part)).join("")}
+    </div>
+  `;
+  document.querySelector("#instruction-pages").innerHTML = (model.pages || [])
+    .map(
+      (page) => `
+        <article class="manual-page ikea">
+          <div class="manual-page-head ikea-head">
+            <h4>${escapeHtml(page.title)}</h4>
+            <p>${escapeHtml(page.caption || "")}</p>
+          </div>
+          ${renderIkeaPageSvg(page)}
+        </article>
+      `
+    )
+    .join("");
+}
+
 function renderInstructionManual(instructionModel) {
+  if (instructionModel?.pages?.length) {
+    return renderIkeaManual(instructionModel);
+  }
   const parts = instructionModel.parts || [];
   const frames = instructionModel.frames || [];
   document.querySelector("#instruction-mode").textContent = humanizeRenderer(instructionModel.renderer || "2D vector");
@@ -1073,7 +1104,16 @@ function renderMiniPartShape(part) {
   `;
 }
 
+function renderIkeaPageSvg(page, options = {}) {
+  const vb = page.view_box || { width: 680, height: 860 };
+  return `<svg class="ikea-page-svg${options.compact ? " compact" : ""}" viewBox="0 0 ${vb.width} ${vb.height}" role="img" aria-label="${escapeHtml(page.title)}">${page.svg}</svg>`;
+}
+
 function renderInstructionSvg(instructionModel, frame, options = {}) {
+  if (instructionModel?.pages?.length && frame && frame.page_index != null) {
+    const page = instructionModel.pages[frame.page_index];
+    if (page) return renderIkeaPageSvg(page, options);
+  }
   const viewBox = instructionModel.view_box || { width: 520, height: 360 };
   const parts = instructionModel.parts || [];
   const visibleParts = new Set(frame.visible_parts || []);

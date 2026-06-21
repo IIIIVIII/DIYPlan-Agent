@@ -1,4 +1,5 @@
 import { buildStoreLinks, catalogContext } from "./materialCatalog.js";
+import { generatePedestalManual } from "./pedestalManual.js";
 import { callOpenAIPlan } from "./openai.js";
 import { callLocalPlan, callLocalUnderstand, checkLocalBackend, localBackendConfigured } from "./localBackend.js";
 import { evaluatePlanQuality } from "./evaluator.js";
@@ -102,12 +103,9 @@ export async function generatePlan(payload) {
     );
   }
 
-  const verified = verifyPlan(plan, preferences);
-  // Keep Node's IKEA-style template manual, but drop the real parts segmented
-  // 1:1 from the photo into the matching slots.
-  if (localResult?.partCutouts) {
-    attachPhotoCutouts(verified.instruction_model, localResult.partCutouts, localResult.dominantColor);
-  }
+  // The manual is drawn as clean isometric line art, tinted with the real
+  // object colour sampled from the photo (no photo cut-outs pasted in).
+  const verified = verifyPlan(plan, preferences, { dominantColor: localResult?.dominantColor });
   const purchaseLinks = buildStoreLinks(verified.materials, preferences.zipcode);
   const triggeredEscalations = detectEscalationTriggers({ plan: verified, preferences });
 
@@ -279,7 +277,7 @@ function suggestionsFromPerception(perception, preferences) {
 }
 
 function matchFurnitureOption(category) {
-  if (/round|dining/.test(category)) return "round dining table";
+  if (/round|dining|pedestal|bistro|bar table|cafe|drum/.test(category)) return "round dining table";
   if (/book|shelf|bookcase/.test(category)) return "bookshelf";
   if (/coffee/.test(category)) return "coffee table";
   if (/night|bedside/.test(category)) return "nightstand";
@@ -287,7 +285,7 @@ function matchFurnitureOption(category) {
   return "side table";
 }
 
-function verifyPlan(plan, preferences) {
+function verifyPlan(plan, preferences, options = {}) {
   const next = structuredClone(plan);
   const notes = new Set(next.evaluation.verifier_notes || []);
 
@@ -326,7 +324,7 @@ function verifyPlan(plan, preferences) {
     ...next.routing_notes,
     "Future version: route material normalization and verifier passes to a smaller local model."
   ];
-  next.instruction_model = buildInstructionModel(next, preferences);
+  next.instruction_model = buildInstructionModel(next, preferences, options);
 
   return next;
 }
@@ -401,11 +399,21 @@ function attachPhotoCutouts(model, partCutouts, tint) {
   }
 }
 
-function buildInstructionModel(plan, preferences) {
+function buildInstructionModel(plan, preferences, options = {}) {
   const category = String(plan.detected_object?.category || preferences.furnitureType || "side table").toLowerCase();
-  if (category.includes("round") || category.includes("dining")) return roundTableInstructionModel(plan);
+  const hint = `${category} ${String(preferences.furnitureType || "")} ${String(plan.detected_object?.structure || "")}`.toLowerCase();
+  const isPedestal = /round|dining|pedestal|bistro|bar table|cafe|drum|stool table/.test(hint);
+  if (isPedestal) {
+    return generatePedestalManual(plan, preferences, { baseColor: normalizeHexColor(options.dominantColor) });
+  }
   if (category.includes("book") || category.includes("shelf")) return bookshelfInstructionModel(plan);
   return sideTableInstructionModel(plan);
+}
+
+function normalizeHexColor(value) {
+  if (typeof value !== "string") return undefined;
+  const clean = value.trim();
+  return /^#?[0-9a-fA-F]{6}$/.test(clean) ? (clean.startsWith("#") ? clean : `#${clean}`) : undefined;
 }
 
 function sideTableInstructionModel(plan) {

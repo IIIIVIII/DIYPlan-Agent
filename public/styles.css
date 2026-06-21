@@ -1250,6 +1250,31 @@ code {
   font-weight: 950;
 }
 
+/* --- IKEA-style line-art pages --- */
+.manual-page.ikea {
+  background: #ffffff;
+  border: 1px solid rgba(20, 22, 15, 0.18);
+}
+
+.manual-page-head.ikea-head {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.ikea-page-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.ikea-page-svg.compact {
+  max-height: 220px;
+  width: auto;
+  margin: 0 auto;
+}
+
 .instruction-svg {
   display: block;
   width: 100%;

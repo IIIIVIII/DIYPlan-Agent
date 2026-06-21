@@ -74,23 +74,17 @@ def _live_response(preferences: dict, image_data_urls, stages: List[dict], start
     plan, plan_model = _run_planning(models, plan_prompt, image_path, preferences, perception)
     stages.append(_stage("plan-generation", plan_model, "Structured plan generated and schema-validated.", t0))
 
-    # Stage 4: segment the real parts 1:1 from the photo. We do NOT build the
-    # manual layout here -- the Node side owns the IKEA-style template the user
-    # asked us to keep. We just return cutouts grouped by role so Node can drop
-    # each real part into the matching slot of its template.
+    # Stage 4: sample the real object colour from the photo so Node can tint the
+    # clean isometric line-art manual to match. We no longer paste photo cut-outs
+    # into the manual, so the heavy GroundingDINO/SAM2 segmentation is skipped.
     t0 = time.perf_counter()
-    spec = _fallback_instruction_spec(perception, preferences)
-    seg_template = build_instruction_model(spec)
-    cut_map, tint = _compute_cutouts(seg_template, image_path)
-    part_cutouts = _group_cutouts_by_role(seg_template, cut_map)
-    n_cut = len(cut_map)
+    tint = _sample_color(image_path)
+    part_cutouts = {}
     stages.append(
         _stage(
-            "part-segmentation",
-            f"{config.GROUNDING_MODEL.split('/')[-1]}+sam2",
-            f"Cut {n_cut} real parts 1:1 from the photo."
-            if n_cut
-            else "No clean parts segmented; manual uses simplified shapes.",
+            "color-sampling",
+            "pillow",
+            f"Sampled the object colour {tint} for the manual." if tint else "No photo colour sampled.",
             t0,
         )
     )
@@ -109,6 +103,19 @@ def _live_response(preferences: dict, image_data_urls, stages: List[dict], start
             "local_latency_ms": int((time.perf_counter() - started) * 1000),
         },
     }
+
+
+def _sample_color(image_path: Optional[str]):
+    """Dominant object colour as a #rrggbb hex string (PIL only, no torch)."""
+    if not image_path:
+        return None
+    try:
+        from . import segmentation
+
+        return segmentation.dominant_color(image_path)
+    except Exception as exc:
+        print(f"[pipeline] colour sample skipped: {exc}")
+        return None
 
 
 def _compute_cutouts(seg_template: dict, image_path: Optional[str]):

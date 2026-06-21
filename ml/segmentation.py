@@ -315,7 +315,18 @@ def dominant_color(image_path: str) -> Optional[str]:
         keep = (brightness > 35) & (brightness < 232)
         if keep.sum() > 50:
             data = data[keep]
-        r, g, b = (int(round(v)) for v in data.mean(axis=0))
+
+        # Bias toward the painted / vivid colour of the object (e.g. a red base)
+        # rather than the flat average, which would wash out into a muddy grey.
+        mx = data.max(axis=1)
+        mn = data.min(axis=1)
+        sat = (mx - mn) / (mx + 1e-6)  # 0 (grey) .. 1 (vivid)
+        if sat.max() > 0.18:
+            weight = sat ** 2
+        else:
+            weight = np.ones(len(data))  # near-greyscale object: plain mean
+        weight = weight / weight.sum()
+        r, g, b = (int(round(v)) for v in (data * weight[:, None]).sum(axis=0))
         return f"#{r:02x}{g:02x}{b:02x}"
     except Exception:
         return None
