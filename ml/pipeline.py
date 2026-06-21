@@ -13,7 +13,8 @@ import time
 from typing import List, Optional, Tuple
 
 from . import config
-from .schemas import Perception, Plan
+from .instruction_layout import build_instruction_model
+from .schemas import InstructionSpec, Perception, Plan
 
 _JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
 
@@ -57,11 +58,25 @@ def _live_response(preferences: dict, image_data_url: str, stages: List[dict], s
     plan, plan_model = _run_planning(models, plan_prompt, image_path)
     stages.append(_stage("plan-generation", plan_model, "Structured plan generated and schema-validated.", t0))
 
+    # Stage 4: instruction manual (semantic spec -> deterministic layout)
+    t0 = time.perf_counter()
+    spec = _run_instruction(models, prompts, preferences, perception, image_path)
+    instruction_model = build_instruction_model(spec)
+    stages.append(
+        _stage(
+            "instruction-manual",
+            config.VLM_MODEL,
+            f"Generated {len(spec.parts)} color-coded parts across {len(spec.steps)} assembly steps.",
+            t0,
+        )
+    )
+
     return {
         "mode": "local-mlx",
         "plan": plan.model_dump(),
         "perception": perception,
         "retrieval": retrieved,
+        "instruction_model": instruction_model,
         "stages": stages,
         "metrics": {
             "model": config.model_label(),
@@ -69,6 +84,22 @@ def _live_response(preferences: dict, image_data_url: str, stages: List[dict], s
             "local_latency_ms": int((time.perf_counter() - started) * 1000),
         },
     }
+
+
+def _run_instruction(models, prompts, preferences, perception, image_path) -> InstructionSpec:
+    prompt = prompts.instruction_prompt(preferences, perception)
+    for attempt in range(config.JSON_REPAIR_RETRIES + 1):
+        text = models.vlm_generate(
+            prompt if attempt == 0 else _repair_prompt(prompt, "Invalid JSON or schema."),
+            image_path,
+        )
+        data = _parse_json(text)
+        if data is not None:
+            try:
+                return InstructionSpec(**data)
+            except Exception:
+                continue
+    return _fallback_instruction_spec(perception, preferences)
 
 
 def _run_perception(models, prompts, preferences: dict, image_path: Optional[str]) -> dict:
@@ -140,11 +171,23 @@ def _mock_response(preferences: dict, stages: List[dict], started: float) -> dic
     plan = _mock_plan(preferences)
     stages.append(_stage("plan-generation", "local-mlx-mock", "Deterministic mock plan (schema-validated).", started))
 
+    spec = _fallback_instruction_spec(perception, preferences)
+    instruction_model = build_instruction_model(spec)
+    stages.append(
+        _stage(
+            "instruction-manual",
+            "local-mlx-mock",
+            f"Mock manual: {len(spec.parts)} parts across {len(spec.steps)} steps.",
+            started,
+        )
+    )
+
     return {
         "mode": "local-mlx-mock",
         "plan": plan.model_dump(),
         "perception": perception,
         "retrieval": retrieved,
+        "instruction_model": instruction_model,
         "stages": stages,
         "metrics": {
             "model": "local-mlx-mock",
@@ -242,6 +285,95 @@ def _mock_plan(preferences: dict) -> Plan:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+_PALETTE = [
+    "#c9853f", "#a9613a", "#d8a35a", "#8c7a5b", "#b5703a",
+    "#7d8a9a", "#9a5b3c", "#caa46a", "#6f5a44", "#b98a55",
+]
+
+
+def _fallback_instruction_spec(perception: dict, preferences: dict) -> InstructionSpec:
+    """Build a sensible manual from perception when the model JSON is unusable.
+
+    Covers the common table and shelf topologies so there is always a
+    color-coded, step-wise manual to render.
+    """
+    category = str(
+        (perception or {}).get("category") or preferences.get("furnitureType") or "side table"
+    ).lower()
+    is_shelf = any(k in category for k in ("shelf", "bookcase", "bookshelf"))
+    is_round = any(k in category for k in ("round", "dining"))
+
+    parts = []
+    steps = []
+
+    def color(i):
+        return _PALETTE[i % len(_PALETTE)]
+
+    if is_shelf:
+        parts += [
+            {"id": "side_l", "label": "Left upright", "role": "side", "shape": "panel", "color": color(0)},
+            {"id": "side_r", "label": "Right upright", "role": "side", "shape": "panel", "color": color(1)},
+        ]
+        for i in range(3):
+            parts.append({"id": f"shelf_{i}", "label": f"Shelf {i + 1}", "role": "shelf", "shape": "panel", "color": color(2 + i)})
+        parts.append({"id": "back", "label": "Back panel", "role": "back", "shape": "panel", "color": color(6)})
+        steps = [
+            {"title": "Step 1 - Stand the uprights", "action": "Set the two side uprights parallel.", "add_parts": ["side_l", "side_r"]},
+            {"title": "Step 2 - Add the shelves", "action": "Slide each shelf between the uprights and fasten.", "add_parts": ["shelf_0", "shelf_1", "shelf_2"], "hardware": [{"name": "wood screws", "count": 12}]},
+            {"title": "Step 3 - Attach the back", "action": "Square the frame and nail on the back panel.", "add_parts": ["back"], "hardware": [{"name": "panel nails", "count": 8}]},
+        ]
+        return InstructionSpec(object_type=category, topology="shelf", parts=_mk_parts(parts), steps=_mk_steps(steps))
+
+    # Table topology
+    if is_round:
+        parts += [
+            {"id": "top_l", "label": "Left tabletop half", "role": "top_half_left", "shape": "round_half", "color": color(0)},
+            {"id": "top_r", "label": "Right tabletop half", "role": "top_half_right", "shape": "round_half", "color": color(0)},
+            {"id": "conn", "label": "Seam connector", "role": "connector", "shape": "bracket", "color": "#7d8a9a"},
+        ]
+        first_step = {"title": "Step 1 - Join tabletop halves", "action": "Slide the two halves together and lock the seam connectors.", "add_parts": ["top_l", "top_r", "conn"], "hardware": [{"name": "seam connector", "count": 2}]}
+    else:
+        parts += [{"id": "top", "label": "Tabletop", "role": "top", "shape": "panel", "color": color(0)}]
+        first_step = {"title": "Step 1 - Prepare the top", "action": "Lay the tabletop face down on a padded surface.", "add_parts": ["top"]}
+
+    parts += [
+        {"id": "apron_f", "label": "Front apron", "role": "apron", "shape": "rail", "color": color(3)},
+        {"id": "apron_b", "label": "Back apron", "role": "apron", "shape": "rail", "color": color(3)},
+        {"id": "apron_l", "label": "Left apron", "role": "apron", "shape": "rail", "color": color(4)},
+        {"id": "apron_r", "label": "Right apron", "role": "apron", "shape": "rail", "color": color(4)},
+        {"id": "leg_fl", "label": "Front-left leg", "role": "leg", "shape": "leg", "color": color(5)},
+        {"id": "leg_fr", "label": "Front-right leg", "role": "leg", "shape": "leg", "color": color(5)},
+        {"id": "leg_bl", "label": "Back-left leg", "role": "leg", "shape": "leg", "color": color(6)},
+        {"id": "leg_br", "label": "Back-right leg", "role": "leg", "shape": "leg", "color": color(6)},
+        {"id": "brace_a", "label": "Cross brace A", "role": "brace", "shape": "rail", "color": color(7)},
+        {"id": "brace_b", "label": "Cross brace B", "role": "brace", "shape": "rail", "color": color(7)},
+    ]
+    steps = [
+        first_step,
+        {"title": "Step 2 - Attach the apron frame", "action": "Screw the four apron rails into a rectangle under the top.", "add_parts": ["apron_f", "apron_b", "apron_l", "apron_r"], "hardware": [{"name": "wood screws", "count": 8}]},
+        {"title": "Step 3 - Fit the four legs", "action": "Bolt a leg into each corner of the apron frame.", "add_parts": ["leg_fl", "leg_fr", "leg_bl", "leg_br"], "hardware": [{"name": "leg bolts", "count": 4}]},
+        {"title": "Step 4 - Tighten the cross brace", "action": "Install the lower X brace and tighten evenly.", "add_parts": ["brace_a", "brace_b"], "hardware": [{"name": "bolts", "count": 4}]},
+    ]
+    return InstructionSpec(object_type=category, topology="table", parts=_mk_parts(parts), steps=_mk_steps(steps))
+
+
+def _mk_parts(rows):
+    out = []
+    for r in rows:
+        r.setdefault("quantity", 1)
+        r.setdefault("material_name", "")
+        r.setdefault("cut_size", "")
+        out.append(r)
+    return out
+
+
+def _mk_steps(rows):
+    for r in rows:
+        r.setdefault("hardware", [])
+        r.setdefault("note", "")
+    return rows
+
+
 def _retrieval_query(perception: dict, preferences: dict) -> str:
     parts = [
         perception.get("category", ""),

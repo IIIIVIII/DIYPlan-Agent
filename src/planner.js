@@ -102,6 +102,9 @@ export async function generatePlan(payload) {
   }
 
   const verified = verifyPlan(plan, preferences);
+  if (localResult?.instructionModel?.parts?.length && localResult.instructionModel.frames?.length) {
+    verified.instruction_model = localResult.instructionModel;
+  }
   const purchaseLinks = buildStoreLinks(verified.materials, preferences.zipcode);
   const triggeredEscalations = detectEscalationTriggers({ plan: verified, preferences });
 

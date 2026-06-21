@@ -96,6 +96,51 @@ class Plan(BaseModel):
     evaluation: Evaluation
 
 
+class InstructionHardware(BaseModel):
+    name: str
+    count: int = Field(ge=1)
+
+
+class InstructionPartSpec(BaseModel):
+    """One physical part of the furniture, color-coded for the manual.
+
+    `role` drives where the deterministic layout engine places the part, so the
+    model never has to emit pixel coordinates (which small VLMs do poorly).
+    """
+
+    id: str
+    label: str
+    # Layout role. Engine understands these; unknown roles fall back to generic.
+    role: str = "generic"  # top | top_half_left | top_half_right | leg | apron |
+    # brace | foot | shelf | side | back | connector | fastener | leveler | generic
+    shape: str = "board"  # round_half | panel | board | rail | leg | bracket | screw
+    quantity: int = Field(ge=1, default=1)
+    color: str = "#c9853f"  # hex; distinct per part so pieces read as separated
+    material_name: str = ""
+    cut_size: str = ""
+
+
+class InstructionStepSpec(BaseModel):
+    title: str
+    action: str
+    add_parts: List[str] = Field(default_factory=list)  # part ids introduced here
+    hardware: List[InstructionHardware] = Field(default_factory=list)
+    note: str = ""
+
+
+class InstructionSpec(BaseModel):
+    """Semantic assembly manual produced by the model.
+
+    Deliberately coordinate-free: the layout engine turns this into the
+    renderer's geometry/placement contract.
+    """
+
+    object_type: str
+    topology: str = "table"  # table | shelf
+    parts: List[InstructionPartSpec] = Field(min_length=1)
+    steps: List[InstructionStepSpec] = Field(min_length=1)
+
+
 class Perception(BaseModel):
     """Lightweight image-understanding output (stage 1).
 

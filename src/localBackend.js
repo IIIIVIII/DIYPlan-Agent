@@ -58,6 +58,7 @@ export async function callLocalPlan({ imageDataUrl, preferences }) {
     plan: body.plan,
     perception: body.perception || null,
     retrieval: body.retrieval || [],
+    instructionModel: body.instruction_model || null,
     stages: body.stages || [],
     metrics: {
       ...(body.metrics || {}),

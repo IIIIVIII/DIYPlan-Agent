@@ -1348,6 +1348,22 @@ code {
   stroke-width: 5;
 }
 
+/* Per-part color from the model-generated instruction spec. Only the fill is
+   overridden so the dark outline and the lime highlight stroke still apply. */
+.manual-part[data-colored] > rect,
+.manual-part[data-colored] > polygon,
+.manual-part[data-colored] > path:not(.manual-grain) {
+  fill: var(--mp-fill);
+}
+
+.manual-part[data-colored] .manual-tabletop-surface {
+  fill: var(--mp-fill);
+}
+
+.manual-part[data-colored] .manual-tabletop-rim {
+  fill: var(--mp-stroke);
+}
+
 .manual-part-fastener_set {
   fill: #262a27;
   stroke: #1b1e1a;

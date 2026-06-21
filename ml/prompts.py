@@ -75,6 +75,70 @@ def planner_prompt(preferences: dict, perception: dict, retrieved: List[dict]) -
     )
 
 
+INSTRUCTION_SYSTEM = (
+    "You are an assembly-manual analyst. Break a piece of furniture into its "
+    "real physical parts and an ordered, IKEA-style assembly sequence. Do NOT "
+    "output pixel coordinates or drawings. Output only a JSON object describing "
+    "parts and steps. Give each distinct part its own color so the pieces read "
+    "as separated, using realistic material hues (wood browns/tans, metal grey, "
+    "etc.) but keeping every part visually distinguishable."
+)
+
+# Roles the deterministic layout engine understands.
+_ROLES = (
+    "top, top_half_left, top_half_right, leg, apron, brace, foot, shelf, side, "
+    "back, connector, fastener, leveler, generic"
+)
+
+
+def instruction_prompt(preferences: dict, perception: dict) -> str:
+    perception_text = json.dumps(perception, indent=2) if perception else "(none)"
+    schema_hint = {
+        "object_type": "string",
+        "topology": "table | shelf",
+        "parts": [
+            {
+                "id": "string (snake_case, unique)",
+                "label": "string",
+                "role": f"one of: {_ROLES}",
+                "shape": "round_half | panel | board | rail | leg | bracket | screw",
+                "quantity": "integer >= 1",
+                "color": "#RRGGBB (distinct per part)",
+                "material_name": "string",
+                "cut_size": "string",
+            }
+        ],
+        "steps": [
+            {
+                "title": "string (e.g. 'Step 1 - Join tabletop halves')",
+                "action": "string (what the builder does)",
+                "add_parts": ["part id introduced this step"],
+                "hardware": [{"name": "string", "count": "integer"}],
+                "note": "string",
+            }
+        ],
+    }
+    return (
+        f"{INSTRUCTION_SYSTEM}\n\n"
+        "Image understanding result:\n"
+        f"{perception_text}\n\n"
+        "Rules:\n"
+        "- List every visible structural part (tabletop or its halves, legs, "
+        "aprons/rails, braces, feet, shelves, sides), each with its own color.\n"
+        "- If the reference is a multi-piece top, use roles top_half_left and "
+        "top_half_right; otherwise use a single top.\n"
+        "- For a round or oval tabletop, set shape to round_half on the top "
+        "halves (or round on a single top) so it is drawn round, not square.\n"
+        "- Order steps the way the piece is actually assembled. Each step should "
+        "introduce only a few new parts via add_parts (referencing part ids).\n"
+        "- Put repeated fasteners in hardware with explicit counts (e.g. 2, 4, 8).\n"
+        "- Choose topology 'table' for tables/desks/nightstands, 'shelf' for "
+        "bookshelves/shelving.\n\n"
+        "Return JSON exactly in this shape (types shown, not values):\n"
+        f"{json.dumps(schema_hint, indent=2)}"
+    )
+
+
 def _plan_schema_hint() -> str:
     hint = {
         "project": {

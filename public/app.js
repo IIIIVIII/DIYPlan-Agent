@@ -758,7 +758,8 @@ function renderInstructionSvg(instructionModel, frame, options = {}) {
       return drawInstructionPart(part, placement, {
         ghost: ghostParts.has(part.id),
         highlight: highlightParts.has(part.id),
-        compact: options.compact
+        compact: options.compact,
+        color: part.color
       });
     })
     .join("");
@@ -783,6 +784,28 @@ function renderInstructionSvg(instructionModel, frame, options = {}) {
   `;
 }
 
+function shadeHex(hex, amount) {
+  const match = /^#?([0-9a-fA-F]{6})$/.exec(hex || "");
+  if (!match) return hex || "#b5703a";
+  const value = parseInt(match[1], 16);
+  let r = (value >> 16) & 255;
+  let g = (value >> 8) & 255;
+  let b = value & 255;
+  const target = amount < 0 ? 0 : 255;
+  const t = Math.abs(amount);
+  r = Math.round(r + (target - r) * t);
+  g = Math.round(g + (target - g) * t);
+  b = Math.round(b + (target - b) * t);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+function colorAttrsFor(part, state) {
+  if (!part || !part.color) return "";
+  const base = state && state.highlight ? shadeHex(part.color, 0.18) : part.color;
+  const stroke = shadeHex(part.color, -0.42);
+  return ` data-colored="1" style="--mp-fill:${base};--mp-stroke:${stroke}"`;
+}
+
 function drawInstructionPart(part, placement, state) {
   const classes = [
     "manual-part",
@@ -792,6 +815,7 @@ function drawInstructionPart(part, placement, state) {
   ]
     .filter(Boolean)
     .join(" ");
+  const colorAttrs = colorAttrsFor(part, state);
 
   if (part.kind === "fastener_set") {
     return (placement.points || [])
@@ -826,7 +850,7 @@ function drawInstructionPart(part, placement, state) {
       [x + width * 0.76, y + height / 2]
     ];
     return `
-      <g class="${classes}">
+      <g class="${classes}"${colorAttrs}>
         <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6"></rect>
         ${holes.map(([hx, hy]) => `<circle class="manual-hole" cx="${hx}" cy="${hy}" r="4"></circle>`).join("")}
       </g>
@@ -836,7 +860,7 @@ function drawInstructionPart(part, placement, state) {
   if (part.kind === "leveler_set") {
     return (placement.points || [])
       .map(([x, y]) => `
-        <g class="${classes}">
+        <g class="${classes}"${colorAttrs}>
           <line x1="${safeNumber(x)}" y1="${safeNumber(y) - 18}" x2="${safeNumber(x)}" y2="${safeNumber(y) + 2}"></line>
           <circle cx="${safeNumber(x)}" cy="${safeNumber(y) + 8}" r="${state.compact ? 5 : 8}"></circle>
         </g>
@@ -859,7 +883,7 @@ function drawInstructionPart(part, placement, state) {
       .map((point) => point.join(","))
       .join(" ");
     return `
-      <g class="${classes}">
+      <g class="${classes}"${colorAttrs}>
         <polygon points="${points}"></polygon>
         <path class="manual-grain" d="M${x + width * 0.45} ${y + 16} C ${x + width * 0.2} ${y + 48}, ${x + width * 0.82} ${y + 80}, ${x + width * 0.45} ${y + height - 18}"></path>
       </g>
@@ -873,7 +897,7 @@ function drawInstructionPart(part, placement, state) {
     const height = safeNumber(placement.height, 16);
     const angle = safeNumber(placement.angle, 0);
     return `
-      <g class="${classes}" transform="rotate(${angle} ${x + width / 2} ${y + height / 2})">
+      <g class="${classes}"${colorAttrs} transform="rotate(${angle} ${x + width / 2} ${y + height / 2})">
         <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6"></rect>
         <path class="manual-grain" d="M${x + 12} ${y + height * 0.5} C ${x + width * 0.32} ${y + 2}, ${x + width * 0.68} ${y + height - 2}, ${x + width - 12} ${y + height * 0.5}"></path>
       </g>
@@ -887,7 +911,7 @@ function drawInstructionPart(part, placement, state) {
   const label = width > 70 && height > 24 && !state.compact ? `<text class="manual-part-label" x="${x + width / 2}" y="${y + height / 2 + 4}">${escapeHtml(part.label)}</text>` : "";
 
   return `
-    <g class="${classes}">
+    <g class="${classes}"${colorAttrs}>
       <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="7"></rect>
       <path class="manual-grain" d="M${x + 12} ${y + height * 0.35} C ${x + width * 0.28} ${y + 4}, ${x + width * 0.62} ${y + height - 5}, ${x + width - 14} ${y + height * 0.34}"></path>
       <path class="manual-grain" d="M${x + 16} ${y + height * 0.72} C ${x + width * 0.34} ${y + height * 0.48}, ${x + width * 0.64} ${y + height + 2}, ${x + width - 18} ${y + height * 0.64}"></path>
@@ -897,6 +921,7 @@ function drawInstructionPart(part, placement, state) {
 }
 
 function drawRoundTopHalf(part, placement, classes, state) {
+  const colorAttrs = colorAttrsFor(part, state);
   const x = safeNumber(placement.x);
   const y = safeNumber(placement.y);
   const width = safeNumber(placement.width, 150);
@@ -915,7 +940,7 @@ function drawRoundTopHalf(part, placement, classes, state) {
   const label = !state.compact ? `<text class="manual-part-label" x="${left ? x + width * 0.62 : x + width * 0.38}" y="${y + height / 2 + 5}">${escapeHtml(part.label)}</text>` : "";
 
   return `
-    <g class="${classes}">
+    <g class="${classes}"${colorAttrs}>
       <path class="manual-tabletop-rim" d="${rimD}"></path>
       <path class="manual-tabletop-surface" d="${topD}"></path>
       ${seam}
